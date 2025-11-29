@@ -6,7 +6,7 @@ import { Redis } from '@upstash/redis';
 const WEBSITE_STATUS_FILE = path.join(process.cwd(), 'websiteStatus.json');
 
 if (!globalThis.__WEBSITE_STATUS__) {
-  globalThis.__WEBSITE_STATUS__ = { isOpen: true, updatedAt: new Date().toISOString() };
+  globalThis.__WEBSITE_STATUS__ = { isOpen: false, updatedAt: new Date().toISOString() };
 }
 
 const hasRedis = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
