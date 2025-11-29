@@ -5,11 +5,10 @@ export async function middleware(request) {
   const isAuthenticated = request.cookies.get('isAuthenticated')?.value === 'true';
   const userRole = JSON.parse(request.cookies.get('user')?.value || '{}').role;
 
-  // Handle website closed for non-admins. This now acts as the global access restriction.
+ 
   let websiteIsOpen = true; // Default to true
   try {
-    // Use a fetch request to the API route. This allows revalidation to work correctly.
-    // The cache-busting parameter and headers are included as a fallback for stubborn caches.
+  
     const cacheBusterUrl = new URL(`/api/website-status?_=${Date.now()}`, request.url);
     const websiteStatusRes = await fetch(cacheBusterUrl, {
       cache: 'no-store',
