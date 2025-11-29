@@ -1,0 +1,25 @@
+# Dependencies
+/node_modules
+
+# Build artifacts
+/.next/
+/out/
+
+# Local environment variables
+.env*.local
+
+# Log files
+*.log
+
+# IDE-specific files
+.vscode/
+
+# System files
+.DS_Store
+
+# Ngrok executable
+ngrok.exe
+ngrok.zip
+
+# Website status
+websiteStatus.json
