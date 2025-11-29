@@ -11,6 +11,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@upstash/redis": "^1.25.4",
+    "axios": "^1.13.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "fs-extra": "^11.3.2",

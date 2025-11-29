@@ -10,7 +10,7 @@ import Card from '../../components/Card'; // Adjust path after component migrati
 import Button from '../../components/Button'; // Adjust path after component migration
 import Input from '../../components/Input'; // Adjust path after component migration
 import { isProjectExpired } from '../../utils/expiryCheck';
-import { getWebsiteStatus, closeWebsite, openWebsite, isWebsiteOpen } from '../../utils/websiteStatus';
+import { getWebsiteStatus, closeWebsite, openWebsite } from '../../utils/websiteStatus';
 
 const AdminAccountsPage = ({ user, onLogout }) => {
   const router = useRouter();

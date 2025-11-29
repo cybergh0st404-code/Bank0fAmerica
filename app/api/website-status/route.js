@@ -1,18 +1,48 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { revalidatePath } from 'next/cache';
+import { Redis } from '@upstash/redis';
 
 const WEBSITE_STATUS_FILE = path.join(process.cwd(), 'websiteStatus.json');
 
-// Initialize website status file if it doesn't exist
+if (!globalThis.__WEBSITE_STATUS__) {
+  globalThis.__WEBSITE_STATUS__ = { isOpen: true, updatedAt: new Date().toISOString() };
+}
+
+const hasRedis = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+let redisClient = null;
+if (hasRedis) {
+  try {
+    redisClient = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  } catch (e) {
+    redisClient = null;
+  }
+}
+
 const initializeStatusFile = async () => {
   try {
     await fs.access(WEBSITE_STATUS_FILE);
+    const contents = await fs.readFile(WEBSITE_STATUS_FILE, 'utf8');
+    const parsed = JSON.parse(contents || '{}');
+    if (typeof parsed.isOpen === 'boolean') {
+      globalThis.__WEBSITE_STATUS__ = {
+        isOpen: parsed.isOpen,
+        updatedAt: parsed.updatedAt || new Date().toISOString(),
+      };
+    }
   } catch (error) {
-    // File does not exist, create it
-    await fs.mkdir(path.dirname(WEBSITE_STATUS_FILE), { recursive: true });
-    await fs.writeFile(WEBSITE_STATUS_FILE, JSON.stringify({ isOpen: true }, null, 2));
-    console.log('websiteStatus.json initialized.');
+    try {
+      await fs.mkdir(path.dirname(WEBSITE_STATUS_FILE), { recursive: true });
+      const initial = { isOpen: true, updatedAt: new Date().toISOString() };
+      await fs.writeFile(WEBSITE_STATUS_FILE, JSON.stringify(initial, null, 2));
+      globalThis.__WEBSITE_STATUS__ = initial;
+      console.log('websiteStatus.json initialized.');
+    } catch (_) {
+      
+    }
   }
 };
 
@@ -20,13 +50,28 @@ initializeStatusFile();
 
 export async function GET() {
   try {
-    const fileContents = await fs.readFile(WEBSITE_STATUS_FILE, 'utf8');
-    const status = JSON.parse(fileContents);
+    let status = globalThis.__WEBSITE_STATUS__ || { isOpen: true };
+    if (redisClient) {
+      try {
+        const raw = await redisClient.get('maintenance:status');
+        if (raw) {
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (typeof parsed?.isOpen === 'boolean') {
+            status = parsed;
+          }
+        }
+      } catch (_) {
+        // fall back to in-memory
+      }
+    }
     return new Response(JSON.stringify(status), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, max-age=0', // Prevent caching
+        'Cache-Control': 'no-store, max-age=0, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store',
       },
     });
   } catch (error) {
@@ -57,7 +102,19 @@ export async function PUT(request) {
       isOpen,
       updatedAt: new Date().toISOString(),
     };
-    await fs.writeFile(WEBSITE_STATUS_FILE, JSON.stringify(newStatus, null, 2));
+    globalThis.__WEBSITE_STATUS__ = newStatus;
+    if (redisClient) {
+      try {
+        await redisClient.set('maintenance:status', JSON.stringify(newStatus));
+      } catch (_) {
+        // ignore redis errors
+      }
+    }
+    try {
+      await fs.writeFile(WEBSITE_STATUS_FILE, JSON.stringify(newStatus, null, 2));
+    } catch (_) {
+      
+    }
     console.log(`Website status set to: ${isOpen}`);
     
     revalidatePath('/', 'layout');
@@ -66,6 +123,7 @@ export async function PUT(request) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
       },
     });
   } catch (error) {
