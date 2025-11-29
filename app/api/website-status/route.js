@@ -36,7 +36,7 @@ const initializeStatusFile = async () => {
   } catch (error) {
     try {
       await fs.mkdir(path.dirname(WEBSITE_STATUS_FILE), { recursive: true });
-      const initial = { isOpen: true, updatedAt: new Date().toISOString() };
+      const initial = { isOpen: false, updatedAt: new Date().toISOString() };
       await fs.writeFile(WEBSITE_STATUS_FILE, JSON.stringify(initial, null, 2));
       globalThis.__WEBSITE_STATUS__ = initial;
       console.log('websiteStatus.json initialized.');
