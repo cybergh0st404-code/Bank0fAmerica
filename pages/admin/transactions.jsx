@@ -9,8 +9,8 @@ import Sidebar from '../../components/Sidebar'; // Adjust path after component m
 import Card from '../../components/Card'; // Adjust path after component migration
 import Button from '../../components/Button'; // Adjust path after component migration
 import Input from '../../components/Input'; // Adjust path after component migration
-import { isProjectExpired } from '../../src/utils/expiryCheck';
-import { getWebsiteStatus, closeWebsite, openWebsite, isWebsiteOpen } from '../../src/utils/websiteStatus';
+import { isProjectExpired } from '../../utils/expiryCheck';
+import { getWebsiteStatus, closeWebsite, openWebsite, isWebsiteOpen } from '../../utils/websiteStatus';
 
 const AdminTransactionsPage = ({ user, onLogout }) => {
   const router = useRouter();
