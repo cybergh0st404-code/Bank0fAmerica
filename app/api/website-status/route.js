@@ -83,6 +83,7 @@ export async function GET() {
         'Pragma': 'no-cache',
         'Expires': '0',
         'Surrogate-Control': 'no-store',
+        'Set-Cookie': `websiteIsOpen=${status.isOpen ? 'true' : 'false'}; Path=/; SameSite=Lax`,
       },
     });
   } catch (error) {
@@ -135,6 +136,7 @@ export async function PUT(request) {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
+        'Set-Cookie': `websiteIsOpen=${newStatus.isOpen ? 'true' : 'false'}; Path=/; SameSite=Lax`,
       },
     });
   } catch (error) {
