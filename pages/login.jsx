@@ -32,7 +32,7 @@ const Login = () => {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || 'Invalid credentials. Access denied.');
+        router.push('/404');
         setLoading(false);
         return;
       }

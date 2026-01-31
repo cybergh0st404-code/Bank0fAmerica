@@ -26,7 +26,7 @@ const AdminLogin = () => {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || 'Invalid admin credentials.');
+        router.push('/404');
         setLoading(false);
         return;
       }
