@@ -17,7 +17,7 @@ const sampleTransactions = [
   {
     id: 1001,
     type: 'debit',
-    description: 'Cathie Pritchard',
+    description: 'Heather L Gordon',
     amount: -10000.0,
     date: '2026-01-20',
     time: '09:15 AM',
@@ -28,10 +28,10 @@ const sampleTransactions = [
   {
     id: 1002,
     type: 'debit',
-    description: 'Brent McKenzie',
-    amount: -10000.0,
+    description: 'Sell Farmer',
+    amount: -5000.0,
     date: '2026-01-18',
-    time: '11:45 AM',
+    time: '05:20 PM',
     category: 'Transfer',
     status: 'failed',
     account: 'Checking',
@@ -39,7 +39,19 @@ const sampleTransactions = [
   {
     id: 1003,
     type: 'debit',
-    description: 'Patch P Jones',
+    description: 'Brent McKenzie',
+    amount: -10000.0,
+    date: '2026-01-08',
+    time: '11:45 AM',
+    category: 'Transfer',
+    status: 'failed',
+    account: 'Checking',
+  },
+  
+   {
+    id: 1004,
+    type: 'debit',
+    description: 'James M Nelson',
     amount: -5000.0,
     date: '2026-01-15',
     time: '04:20 PM',

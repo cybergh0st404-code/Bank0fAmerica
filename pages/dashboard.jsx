@@ -45,7 +45,7 @@ const Dashboard = () => {
     {
       id: 1,
       type: 'debit',
-      description: 'Cathie Pritchard',
+      description: 'Heather L Gordon',
       amount: -10000.0,
       date: '2026-01-20',
       category: 'Failed',
@@ -53,19 +53,27 @@ const Dashboard = () => {
     {
       id: 2,
       type: 'debit',
-      description: 'Brent McKenzie',
-      amount: -10000.0,
+      description: 'Sell Farmer',
+      amount: -5000.0,
       date: '2026-01-18',
       category: 'Failed',
     },
     {
       id: 3,
       type: 'debit',
-      description: 'Patch P Jones',
+      description: 'Brent McKenzie',
+      amount: -10000.0,
+      date: '2026-01-08',
+      category: 'Failed',
+    },
+    {
+      id: 4,
+      type: 'debit',
+      description: 'James M Nelson',
       amount: -5000.0,
       date: '2026-01-15',
       category: 'Failed',
-    },
+    }
   ];
 
   const quickActions = [

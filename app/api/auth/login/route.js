@@ -30,7 +30,7 @@ export async function POST(request) {
         });
       }
       if (twoFactorCode === USER_2FA) {
-        const user = { id: 'user-1', name: 'James M Nelson', email, role: 'user' };
+        const user = { id: 'user-1', name: 'Pattch P Jones', email, role: 'user' };
         return new Response(JSON.stringify({ user }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
