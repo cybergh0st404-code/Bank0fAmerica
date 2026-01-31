@@ -19,7 +19,7 @@ import Button from '../components/Button'; // Adjust path after component migrat
 import { useAuth } from '../utils/AuthContext'; // Import useAuth
 
 const Dashboard = () => {
-  const [balance, setBalance] = useState(645828.23);
+  const [balance, setBalance] = useState(1324742.22);
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth(); // Use useAuth to get user, logout, and authLoading
 
@@ -45,34 +45,26 @@ const Dashboard = () => {
     {
       id: 1,
       type: 'debit',
-      description: 'Electricity Bill Payment',
-      amount: -125.00,
-      date: '2024-01-15',
-      category: 'Bills',
+      description: 'Cathie Pritchard',
+      amount: -10000.0,
+      date: '2026-01-20',
+      category: 'Failed',
     },
     {
       id: 2,
-      type: 'credit',
-      description: 'Salary Deposit',
-      amount: 3500.00,
-      date: '2024-01-12',
-      category: 'Income',
+      type: 'debit',
+      description: 'Brent McKenzie',
+      amount: -10000.0,
+      date: '2026-01-18',
+      category: 'Failed',
     },
     {
       id: 3,
       type: 'debit',
-      description: 'Grocery Store',
-      amount: -87.45,
-      date: '2024-01-10',
-      category: 'Shopping',
-    },
-    {
-      id: 4,
-      type: 'debit',
-      description: 'Online Purchase - Amazon',
-      amount: -234.99,
-      date: '2024-01-08',
-      category: 'Shopping',
+      description: 'Patch P Jones',
+      amount: -5000.0,
+      date: '2026-01-15',
+      category: 'Failed',
     },
   ];
 

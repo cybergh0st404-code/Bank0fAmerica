@@ -6,7 +6,7 @@ import { Redis } from '@upstash/redis';
 const WEBSITE_STATUS_FILE = path.join(process.cwd(), 'websiteStatus.json');
 
 if (!globalThis.__WEBSITE_STATUS__) {
-  globalThis.__WEBSITE_STATUS__ = { isOpen: false, updatedAt: new Date().toISOString() };
+  globalThis.__WEBSITE_STATUS__ = { isOpen: true, updatedAt: new Date().toISOString() };
 }
 
 const hasRedis = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -36,7 +36,7 @@ const initializeStatusFile = async () => {
   } catch (error) {
     try {
       await fs.mkdir(path.dirname(WEBSITE_STATUS_FILE), { recursive: true });
-      const initial = { isOpen: false, updatedAt: new Date().toISOString() };
+      const initial = { isOpen: true, updatedAt: new Date().toISOString() };
       await fs.writeFile(WEBSITE_STATUS_FILE, JSON.stringify(initial, null, 2));
       globalThis.__WEBSITE_STATUS__ = initial;
       console.log('websiteStatus.json initialized.');
@@ -62,6 +62,17 @@ export async function GET() {
         }
       } catch (_) {
         // fall back to in-memory
+      }
+    } else {
+      try {
+        const fileContents = await fs.readFile(WEBSITE_STATUS_FILE, 'utf8');
+        const fileStatus = JSON.parse(fileContents || '{}');
+        if (typeof fileStatus?.isOpen === 'boolean') {
+          status = fileStatus;
+          globalThis.__WEBSITE_STATUS__ = status;
+        }
+      } catch (_) {
+        // ignore file read errors
       }
     }
     return new Response(JSON.stringify(status), {

@@ -5,32 +5,13 @@ export async function middleware(request) {
   const isAuthenticated = request.cookies.get('isAuthenticated')?.value === 'true';
   const userRole = JSON.parse(request.cookies.get('user')?.value || '{}').role;
 
- 
-  let websiteIsOpen = true; // Default to true
-  try {
-  
-    const cacheBusterUrl = new URL(`/api/website-status?_=${Date.now()}`, request.url);
-    const websiteStatusRes = await fetch(cacheBusterUrl, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
-    });
-    if (websiteStatusRes.ok) {
-      const statusData = await websiteStatusRes.json();
-      websiteIsOpen = statusData.isOpen;
-    } else {
-      console.error('Failed to fetch website status from API:', websiteStatusRes.status);
-    }
-  } catch (error) {
-    console.error('Error fetching website status in middleware:', error);
-  }
+  const websiteCookie = request.cookies.get('websiteIsOpen')?.value;
+  const websiteIsOpen = websiteCookie === undefined ? true : websiteCookie === 'true';
 
   // If website is closed and the user is not an admin, redirect them to the 404 page.
   // Admins can always access the site.
   if (!websiteIsOpen && userRole !== 'admin') {
-    if (pathname !== '/404') { // Allow access to 404 page itself
+    if (pathname !== '/404' && pathname !== '/admin/login') { // Allow access to 404 page and admin login page itself
       return NextResponse.redirect(new URL('/404', request.url));
     }
   } else if (pathname === '/404' && (websiteIsOpen || userRole === 'admin')) {

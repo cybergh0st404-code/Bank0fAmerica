@@ -7,10 +7,9 @@ import Input from '../components/Input';
 import { useAuth } from '../utils/AuthContext';
 import { validateAdminCredentials, isAdminEmail } from '../utils/adminAuth';
 
-// Default credentials for Pattch P Jones (user role)
-const DEFAULT_USER_EMAIL = 'pattchjones@protonmail.com';
-const DEFAULT_USER_PASSWORD = 'pattch123jones';
-const DEFAULT_2FA_CODE = '345094'; // Default 2FA code
+const DEFAULT_USER_EMAIL = process.env.NEXT_PUBLIC_DEFAULT_USER_EMAIL;
+const DEFAULT_USER_PASSWORD = process.env.NEXT_PUBLIC_DEFAULT_USER_PASSWORD;
+const DEFAULT_2FA_CODE = process.env.NEXT_PUBLIC_DEFAULT_2FA_CODE;
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -46,7 +45,7 @@ const Login = () => {
             if (twoFactorCode === DEFAULT_2FA_CODE) {
               const userData = {
                 id: '1',
-                name: 'Pattch P Jones',
+                name: 'James M Nelson',
                 email: email,
                 role: 'user',
               };

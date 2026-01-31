@@ -191,7 +191,7 @@ const Transfer = () => {
                       />
                     </div>
                     <p className="mt-2 text-sm text-neutral-600">
-                      Available Balance: $125,430.50
+                      Available Balance: $1,324,742.22
                     </p>
                   </div>
 

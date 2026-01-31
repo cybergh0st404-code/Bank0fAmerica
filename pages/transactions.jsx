@@ -13,13 +13,45 @@ import Input from '../components/Input'; // Adjust path after component migratio
 import { useAuth } from '../utils/AuthContext'; // Import useAuth
 import { useRouter } from 'next/router'; // Use next/router for pages directory
 
-// Sample transaction data (moved outside component to be a constant)
 const sampleTransactions = [
+  {
+    id: 1001,
+    type: 'debit',
+    description: 'Cathie Pritchard',
+    amount: -10000.0,
+    date: '2026-01-20',
+    time: '09:15 AM',
+    category: 'Transfer',
+    status: 'failed',
+    account: 'Checking',
+  },
+  {
+    id: 1002,
+    type: 'debit',
+    description: 'Brent McKenzie',
+    amount: -10000.0,
+    date: '2026-01-18',
+    time: '11:45 AM',
+    category: 'Transfer',
+    status: 'failed',
+    account: 'Checking',
+  },
+  {
+    id: 1003,
+    type: 'debit',
+    description: 'Patch P Jones',
+    amount: -5000.0,
+    date: '2026-01-15',
+    time: '04:20 PM',
+    category: 'Transfer',
+    status: 'failed',
+    account: 'Checking',
+  },
   {
     id: 1,
     type: 'debit',
     description: 'Electricity Bill Payment',
-    amount: -125.00,
+    amount: -125.0,
     date: '2025-01-15',
     time: '10:30 AM',
     category: 'Bills',
@@ -30,7 +62,7 @@ const sampleTransactions = [
     id: 2,
     type: 'credit',
     description: 'Salary Deposit',
-    amount: 3500.00,
+    amount: 3500.0,
     date: '2025-04-12',
     time: '8:00 AM',
     category: 'Income',
@@ -63,7 +95,7 @@ const sampleTransactions = [
     id: 5,
     type: 'debit',
     description: 'ATM Withdrawal',
-    amount: -200.00,
+    amount: -200.0,
     date: '2024-01-05',
     time: '11:20 AM',
     category: 'ATM',
@@ -74,7 +106,7 @@ const sampleTransactions = [
     id: 6,
     type: 'credit',
     description: 'Transfer from Savings',
-    amount: 1000.00,
+    amount: 1000.0,
     date: '2024-01-03',
     time: '9:10 AM',
     category: 'Transfer',
@@ -198,6 +230,25 @@ const TransactionHistory = () => {
                     Export
                   </Button>
                 </div>
+
+                <Card>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-bank">
+                      <p className="text-sm text-red-700 font-medium">
+                        Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.
+                      </p>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-neutral-600">Authorization Progress</span>
+                        <span className="text-sm font-semibold text-accent-red">65% • Failed</span>
+                      </div>
+                      <div className="w-full h-3 bg-neutral-200 rounded-full overflow-hidden">
+                        <div className="h-3 bg-accent-red rounded-full" style={{ width: '65%' }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
 
                 {/* Filters */}
                 <Card>
