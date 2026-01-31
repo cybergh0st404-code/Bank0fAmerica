@@ -4,7 +4,6 @@ import { Shield, ArrowRight } from 'lucide-react';
 import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import { useAuth } from '../../../utils/AuthContext';
-import { validateAdminCredentials } from '../../../utils/adminAuth';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -38,29 +37,30 @@ const AdminLogin = () => {
       return;
     }
 
-    // Simulate API call for admin login
-    setTimeout(() => {
-      if (email && password) {
-        if (validateAdminCredentials(email, password)) {
-          const userData = {
-            id: 'admin-1',
-            name: 'Admin User',
-            email: email,
-            role: 'admin',
-          };
-
-          login(userData);
-          setLoading(false);
-          router.push('/admin'); // Admin goes to admin dashboard
-        } else {
-          setError('Invalid admin credentials.');
-          setLoading(false);
-        }
-      } else {
-        setError('Please enter both email and password');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Invalid admin credentials.');
         setLoading(false);
+        return;
       }
-    }, 1000);
+      if (data.user && data.user.role === 'admin') {
+        login(data.user);
+        setLoading(false);
+        router.push('/admin');
+        return;
+      }
+      setError('Unexpected response.');
+      setLoading(false);
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
   };
 
   // Only render the form if the slug is valid (or not yet loaded)

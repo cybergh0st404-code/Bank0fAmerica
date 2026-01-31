@@ -5,11 +5,7 @@ import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import { useAuth } from '../utils/AuthContext';
-import { validateAdminCredentials, isAdminEmail } from '../utils/adminAuth';
-
-const DEFAULT_USER_EMAIL = process.env.NEXT_PUBLIC_DEFAULT_USER_EMAIL;
-const DEFAULT_USER_PASSWORD = process.env.NEXT_PUBLIC_DEFAULT_USER_PASSWORD;
-const DEFAULT_2FA_CODE = process.env.NEXT_PUBLIC_DEFAULT_2FA_CODE;
+ 
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -21,75 +17,42 @@ const Login = () => {
   const router = useRouter();
   const { login } = useAuth(); // Use the login function from AuthContext
 
-  // No useEffect needed for expiry/website status as handled by middleware
+  
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      if (email && password) {
-        // Check for default user credentials (Pattch P Jones)
-        const isDefaultUser = email === DEFAULT_USER_EMAIL && password === DEFAULT_USER_PASSWORD;
-
-        if (isDefaultUser) {
-          if (!show2FA) {
-            // First step for default user: show 2FA
-            setShow2FA(true);
-            setLoading(false);
-            return;
-          } else {
-            // Second step for default user: validate 2FA code
-            if (twoFactorCode === DEFAULT_2FA_CODE) {
-              const userData = {
-                id: '1',
-                name: 'James M Nelson',
-                email: email,
-                role: 'user',
-              };
-
-              // No need to set localStorage here, AuthContext handles cookies
-              // localStorage.setItem('user', JSON.stringify(userData));
-              // localStorage.setItem('isAuthenticated', 'true');
-              
-              login(userData);
-              
-              setLoading(false); // Reset loading state
-              router.push('/dashboard'); // Default user always goes to dashboard
-              return; // Exit after successful default user login
-            } else {
-              setError('Invalid 2FA code for default user.');
-              setLoading(false);
-              return;
-            }
-          }
-        } else if (validateAdminCredentials(email, password)) { // Check for admin credentials
-          const userData = {
-            id: 'admin-1', // Admin ID
-            name: 'Admin User', // Admin Name
-            email: email,
-            role: 'admin',
-          };
-
-          // AuthContext handles cookies
-          login(userData);
-          setLoading(false);
-          router.push('/admin'); // Admin goes to admin dashboard
-          return;
-        }
-        else {
-          // If not the default user or admin, deny access
-          setError('Invalid credentials. Access denied.');
-          setLoading(false);
-          return;
-        }
-      } else {
-        setError('Please enter both email and password');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, twoFactorCode: show2FA ? twoFactorCode : undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Invalid credentials. Access denied.');
         setLoading(false);
+        return;
       }
-    }, 1000);
+      if (data.require2fa) {
+        setShow2FA(true);
+        setLoading(false);
+        return;
+      }
+      if (data.user) {
+        login(data.user);
+        setLoading(false);
+        router.push(data.user.role === 'admin' ? '/admin' : '/dashboard');
+        return;
+      }
+      setError('Unexpected response.');
+      setLoading(false);
+    } catch (err) {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
