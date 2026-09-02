@@ -41,7 +41,7 @@ const initializeStatusFile = async () => {
       globalThis.__WEBSITE_STATUS__ = initial;
       console.log('websiteStatus.json initialized.');
     } catch (_) {
-      
+
     }
   }
 };
@@ -50,31 +50,20 @@ initializeStatusFile();
 
 export async function GET() {
   try {
-    let status = globalThis.__WEBSITE_STATUS__ || { isOpen: true };
-    if (redisClient) {
-      try {
-        const raw = await redisClient.get('maintenance:status');
-        if (raw) {
-          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          if (typeof parsed?.isOpen === 'boolean') {
-            status = parsed;
-          }
-        }
-      } catch (_) {
-        // fall back to in-memory
+    let status = { isOpen: true, updatedAt: new Date().toISOString() };
+    try {
+      const fileContents = await fs.readFile(WEBSITE_STATUS_FILE, 'utf8');
+      const fileStatus = JSON.parse(fileContents || '{}');
+      if (typeof fileStatus?.isOpen === 'boolean') {
+        status = fileStatus;
+        globalThis.__WEBSITE_STATUS__ = status;
       }
-    } else {
-      try {
-        const fileContents = await fs.readFile(WEBSITE_STATUS_FILE, 'utf8');
-        const fileStatus = JSON.parse(fileContents || '{}');
-        if (typeof fileStatus?.isOpen === 'boolean') {
-          status = fileStatus;
-          globalThis.__WEBSITE_STATUS__ = status;
-        }
-      } catch (_) {
-        // ignore file read errors
+    } catch (_) {
+      if (globalThis.__WEBSITE_STATUS__) {
+        status = globalThis.__WEBSITE_STATUS__;
       }
     }
+
     return new Response(JSON.stringify(status), {
       status: 200,
       headers: {
@@ -115,20 +104,19 @@ export async function PUT(request) {
       updatedAt: new Date().toISOString(),
     };
     globalThis.__WEBSITE_STATUS__ = newStatus;
-    if (redisClient) {
-      try {
-        await redisClient.set('maintenance:status', JSON.stringify(newStatus));
-      } catch (_) {
-        // ignore redis errors
-      }
-    }
+
     try {
       await fs.writeFile(WEBSITE_STATUS_FILE, JSON.stringify(newStatus, null, 2));
-    } catch (_) {
-      
+    } catch (fsErr) {
+      console.error('Error writing websiteStatus.json:', fsErr);
     }
+
+    if (redisClient) {
+      redisClient.set('maintenance:status', JSON.stringify(newStatus)).catch(() => {});
+    }
+
     console.log(`Website status set to: ${isOpen}`);
-    
+
     revalidatePath('/', 'layout');
 
     return new Response(JSON.stringify(newStatus), {

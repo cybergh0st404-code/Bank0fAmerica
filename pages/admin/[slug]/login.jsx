@@ -14,14 +14,15 @@ const AdminLogin = () => {
   const { login } = useAuth();
   const { slug } = router.query;
 
+  const configuredSlug = process.env.NEXT_PUBLIC_ADMIN_SECRET_SLUG || process.env.ADMIN_SECRET_SLUG || 'adm_s3cret_lg0g4h2j3k4l5m6n';
+
   // Validate the slug when the component mounts or slug changes
   useEffect(() => {
-    const adminLoginSlug = process.env.ADMIN_SECRET_SLUG || 'supersecretadmin';
-    if (slug && slug !== adminLoginSlug) {
+    if (slug && slug !== configuredSlug) {
       // If the slug doesn't match, redirect to 404
       router.replace('/404');
     }
-  }, [slug, router]);
+  }, [slug, configuredSlug, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -29,8 +30,7 @@ const AdminLogin = () => {
     setLoading(true);
 
     // Ensure slug is valid before attempting login
-    const adminLoginSlug = process.env.ADMIN_SECRET_SLUG || 'supersecretadmin';
-    if (slug !== adminLoginSlug) {
+    if (slug !== configuredSlug) {
       setError('Invalid access URL.');
       setLoading(false);
       router.replace('/404');
@@ -64,7 +64,7 @@ const AdminLogin = () => {
   };
 
   // Only render the form if the slug is valid (or not yet loaded)
-  if (!slug || slug !== (process.env.ADMIN_SECRET_SLUG || 'supersecretadmin')) {
+  if (!slug || slug !== configuredSlug) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
         <div className="text-center text-neutral-600">Loading or Invalid URL...</div>

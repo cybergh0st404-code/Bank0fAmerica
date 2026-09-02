@@ -4,7 +4,20 @@ import { AlertCircle, Lock, XCircle } from 'lucide-react';
 const WebsiteClosedPage = () => {
   return (
     <div className="min-h-screen bg-neutral-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+      <div className="max-w-md w-full animate-fade-in">
+        <div className="flex items-center justify-center space-x-3 mb-6">
+          <img
+            src="/logo.png"
+            alt="Bank of America"
+            className="h-10 w-auto object-contain"
+            style={{
+              mixBlendMode: 'multiply',
+              filter: 'contrast(1.2) brightness(0.95)',
+              backgroundColor: 'transparent',
+            }}
+          />
+          <span className="text-primary-navy font-bold text-2xl">Bank of America</span>
+        </div>
         <div className="bg-white rounded-card shadow-bank-lg p-8 text-center">
           <div className="flex justify-center mb-6">
             <div className="bg-red-100 rounded-full p-4">
