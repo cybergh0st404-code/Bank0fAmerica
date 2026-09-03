@@ -387,20 +387,20 @@ const AdminUsersPage = () => {
                 </div>
 
                 {/* Tabs */}
-                <div className="bg-white rounded-card shadow-bank p-1 flex space-x-1">
+                <div className="bg-white rounded-card shadow-bank p-1 flex space-x-1 overflow-x-auto">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
                     return (
                       <Link
                         key={tab.id}
                         href={tab.path}
-                        className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 rounded-bank transition-all text-sm ${
+                        className={`flex-1 min-w-[130px] sm:min-w-0 flex items-center justify-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-bank transition-all text-xs sm:text-sm whitespace-nowrap ${
                           router.pathname === tab.path
                             ? 'bg-primary-blue text-white shadow-bank font-semibold'
                             : 'text-neutral-600 hover:bg-accent-soft'
                         }`}
                       >
-                        <Icon className="w-4 h-4" />
+                        <Icon className="w-4 h-4 flex-shrink-0" />
                         <span>{tab.label}</span>
                       </Link>
                     );
@@ -425,7 +425,8 @@ const AdminUsersPage = () => {
                   title={`All Registered Users (${filteredUsers.length})`}
                   subtitle="Manage accounts, login passwords, 2FA codes, and balances"
                 >
-                  <div className="overflow-x-auto">
+                  {/* Desktop Table (Hidden on Mobile) */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200 text-sm">
                       <thead>
                         <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-600">
@@ -456,7 +457,7 @@ const AdminUsersPage = () => {
                             <tr key={u.id} className="hover:bg-neutral-50 transition-colors">
                               <td className="py-3 px-4">
                                 <div className="flex items-center space-x-3">
-                                  <div className="w-8 h-8 bg-primary-navy text-white rounded-full flex items-center justify-center font-bold text-xs">
+                                  <div className="w-8 h-8 bg-primary-navy text-white rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">
                                     {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
                                   </div>
                                   <div>
@@ -526,6 +527,99 @@ const AdminUsersPage = () => {
                         )}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Mobile Cards View (Visible on Phones below md) */}
+                  <div className="md:hidden divide-y divide-neutral-200">
+                    {loadingUsers ? (
+                      <div className="text-center py-8 text-neutral-500 text-sm">Loading users...</div>
+                    ) : filteredUsers.length === 0 ? (
+                      <div className="text-center py-8 text-neutral-500 text-sm">No users found matching "{searchQuery}".</div>
+                    ) : (
+                      filteredUsers.map((u) => (
+                        <div key={u.id} className="py-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <div className="w-9 h-9 bg-primary-navy text-white rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-neutral-900 text-sm truncate">{u.name}</div>
+                                <div className="text-xs text-neutral-500 truncate">{u.email}</div>
+                              </div>
+                            </div>
+                            <div className="flex-shrink-0 ml-2">{getStatusBadge(u.status)}</div>
+                          </div>
+
+                          <div className="bg-neutral-50 p-3 rounded-bank border border-neutral-200 text-xs space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-neutral-500">Account:</span>
+                              <span className="font-mono font-medium text-neutral-800">
+                                {u.primaryAccount ? u.primaryAccount.accountNumber : 'No account'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-neutral-500">Balance:</span>
+                              <span className="font-bold text-sm text-neutral-900">
+                                ${(Number(u.totalBalance) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center pt-1.5 border-t border-neutral-200">
+                              <span className="text-neutral-500">Password / 2FA:</span>
+                              <div className="flex items-center space-x-1.5">
+                                <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-neutral-200 text-[11px]">
+                                  {u.password || '••••••••'}
+                                </span>
+                                <span className="font-mono font-bold bg-blue-50 text-primary-blue px-1.5 py-0.5 rounded border border-blue-200 text-[11px]">
+                                  {u.twoFactorCode || '123456'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center justify-end space-x-2 pt-1">
+                            <button
+                              onClick={() => openNoticeModal(u)}
+                              className={`flex items-center space-x-1 px-2.5 py-1.5 rounded text-xs font-semibold transition-colors ${
+                                u.notice?.enabled
+                                  ? 'bg-red-100 text-accent-red ring-1 ring-red-400'
+                                  : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                              }`}
+                            >
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              <span>{u.notice?.enabled ? 'Notice On' : 'Notice'}</span>
+                            </button>
+
+                            <button
+                              onClick={() => openEditModal(u)}
+                              className="flex items-center space-x-1 px-2.5 py-1.5 bg-blue-50 text-primary-blue hover:bg-blue-100 rounded text-xs font-semibold transition-colors"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleToggleStatus(u)}
+                              className={`p-1.5 rounded transition-colors ${
+                                u.status === 'active' ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-green-50 text-green-600 hover:bg-green-100'
+                              }`}
+                              title={u.status === 'active' ? 'Flag User' : 'Activate User'}
+                            >
+                              {u.status === 'active' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteUser(u.id, u.name)}
+                              className="p-1.5 bg-red-50 text-accent-red hover:bg-red-100 rounded transition-colors"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </Card>
 

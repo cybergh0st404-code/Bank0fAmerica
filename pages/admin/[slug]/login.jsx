@@ -1,41 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { Shield, ArrowRight } from 'lucide-react';
 import Button from '../../../components/Button';
 import Input from '../../../components/Input';
 import { useAuth } from '../../../utils/AuthContext';
 
-const AdminLogin = () => {
+export async function getServerSideProps(context) {
+  const { slug } = context.params;
+  const configuredSlug = process.env.ADMIN_SECRET_SLUG || process.env.NEXT_PUBLIC_ADMIN_SECRET_SLUG || 'adm_s3cret_lg0g4h2j3k4l5m6n';
+
+  if (!slug || slug !== configuredSlug) {
+    return {
+      notFound: true,
+    };
+  }
+
+  return {
+    props: {
+      validSlug: configuredSlug,
+    },
+  };
+}
+
+const AdminLogin = ({ validSlug }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
-  const { slug } = router.query;
-
-  const configuredSlug = process.env.NEXT_PUBLIC_ADMIN_SECRET_SLUG || process.env.ADMIN_SECRET_SLUG || 'adm_s3cret_lg0g4h2j3k4l5m6n';
-
-  // Validate the slug when the component mounts or slug changes
-  useEffect(() => {
-    if (slug && slug !== configuredSlug) {
-      // If the slug doesn't match, redirect to 404
-      router.replace('/404');
-    }
-  }, [slug, configuredSlug, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
-    // Ensure slug is valid before attempting login
-    if (slug !== configuredSlug) {
-      setError('Invalid access URL.');
-      setLoading(false);
-      router.replace('/404');
-      return;
-    }
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -45,7 +43,7 @@ const AdminLogin = () => {
       });
       const data = await res.json();
       if (!res.ok) {
-        router.push('/404');
+        setError(data.message || 'Invalid admin credentials.');
         setLoading(false);
         return;
       }
@@ -55,22 +53,13 @@ const AdminLogin = () => {
         router.push('/admin');
         return;
       }
-      setError('Unexpected response.');
+      setError('You do not have administrative privileges.');
       setLoading(false);
     } catch {
       setError('Network error. Please try again.');
       setLoading(false);
     }
   };
-
-  // Only render the form if the slug is valid (or not yet loaded)
-  if (!slug || slug !== configuredSlug) {
-    return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
-        <div className="text-center text-neutral-600">Loading or Invalid URL...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
@@ -93,10 +82,10 @@ const AdminLogin = () => {
             </div>
           </div>
           <h1 className="text-2xl font-bold text-primary-navy mb-2">
-            Admin Sign-In
+            Secure Admin Portal
           </h1>
           <p className="text-neutral-600 text-sm">
-            Enter admin credentials to access the administration panel
+            Enter administrative credentials to access bank control systems
           </p>
         </div>
 
@@ -107,7 +96,7 @@ const AdminLogin = () => {
               <Input
                 label="Admin Email Address"
                 type="email"
-                placeholder="admin@bankofamerica.ambankofamerica.com"
+                placeholder="admin@bankofamerica.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -133,7 +122,7 @@ const AdminLogin = () => {
               className="w-full flex items-center justify-center"
               disabled={loading}
             >
-              {loading ? 'Signing In...' : 'Admin Sign In'}
+              {loading ? 'Authenticating...' : 'Secure Sign In'}
               {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
             </Button>
           </form>

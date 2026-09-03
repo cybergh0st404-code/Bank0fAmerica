@@ -298,20 +298,20 @@ const AdminTransactionsPage = () => {
             </div>
 
             {/* Tabs */}
-            <div className="bg-white rounded-card shadow-bank p-1 flex space-x-1">
+            <div className="bg-white rounded-card shadow-bank p-1 flex space-x-1 overflow-x-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <Link
                     key={tab.id}
                     href={tab.path}
-                    className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 rounded-bank transition-all text-sm ${
+                    className={`flex-1 min-w-[130px] sm:min-w-0 flex items-center justify-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-bank transition-all text-xs sm:text-sm whitespace-nowrap ${
                       router.pathname === tab.path 
                         ? 'bg-primary-blue text-white shadow-bank font-semibold'
                         : 'text-neutral-600 hover:bg-accent-soft'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-4 h-4 flex-shrink-0" />
                     <span>{tab.label}</span>
                   </Link>
                 );
@@ -332,8 +332,12 @@ const AdminTransactionsPage = () => {
             </Card>
 
             {/* Transactions Table */}
-            <Card title={`All Transactions (${filteredTransactions.length})`} subtitle="Full ledger of all system transactions">
-              <div className="overflow-x-auto">
+            <Card 
+              title={`All Transactions (${filteredTransactions.length})`}
+              subtitle="Full transaction records across all bank accounts"
+            >
+              {/* Desktop Table (Hidden on Mobile) */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-neutral-200 text-sm">
                   <thead>
                     <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-600">
@@ -417,6 +421,67 @@ const AdminTransactionsPage = () => {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Cards (Visible on Phones below md) */}
+              <div className="md:hidden divide-y divide-neutral-200">
+                {loading ? (
+                  <div className="text-center py-8 text-neutral-500 text-sm">Loading transactions...</div>
+                ) : filteredTransactions.length === 0 ? (
+                  <div className="text-center py-8 text-neutral-500 text-sm">No transactions found.</div>
+                ) : (
+                  filteredTransactions.map((tx) => {
+                    const isCredit = tx.type === 'credit' || tx.amount > 0;
+                    return (
+                      <div key={tx.id} className="py-3.5 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-2.5 min-w-0">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                              isCredit ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {isCredit ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-neutral-900 text-sm truncate">{tx.description}</div>
+                              <div className="text-xs text-neutral-500 truncate">{tx.userName} • {tx.accountNumber}</div>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0 ml-2">
+                            <div className={`font-bold text-sm ${isCredit ? 'text-green-600' : 'text-neutral-900'}`}>
+                              {isCredit ? '+' : ''}${Math.abs(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                            <div className="text-[10px] text-neutral-400">{tx.date}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1 border-t border-neutral-100 text-xs">
+                          <div className="flex items-center space-x-2">
+                            <span className="px-1.5 py-0.5 bg-neutral-100 rounded text-[11px] text-neutral-600">
+                              {tx.category || 'General'}
+                            </span>
+                            <div>{getStatusBadge(tx.status)}</div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => openEditModal(tx)}
+                              className="p-1.5 text-primary-blue hover:bg-blue-50 rounded transition-colors"
+                              title="Edit Transaction"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTx(tx.id, tx.description)}
+                              className="p-1.5 text-accent-red hover:bg-red-50 rounded transition-colors"
+                              title="Delete Transaction"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </Card>
 

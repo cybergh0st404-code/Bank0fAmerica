@@ -192,20 +192,20 @@ const AdminAccountsPage = () => {
             </div>
 
             {/* Tabs */}
-            <div className="bg-white rounded-card shadow-bank p-1 flex space-x-1">
+            <div className="bg-white rounded-card shadow-bank p-1 flex space-x-1 overflow-x-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <Link
                     key={tab.id}
                     href={tab.path}
-                    className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 rounded-bank transition-all text-sm ${
+                    className={`flex-1 min-w-[130px] sm:min-w-0 flex items-center justify-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-bank transition-all text-xs sm:text-sm whitespace-nowrap ${
                       router.pathname === tab.path 
                         ? 'bg-primary-blue text-white shadow-bank font-semibold'
                         : 'text-neutral-600 hover:bg-accent-soft'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-4 h-4 flex-shrink-0" />
                     <span>{tab.label}</span>
                   </Link>
                 );
@@ -227,7 +227,8 @@ const AdminAccountsPage = () => {
 
             {/* Accounts Table */}
             <Card title={`All Accounts (${filteredAccounts.length})`} subtitle="View and edit live account balances">
-              <div className="overflow-x-auto">
+              {/* Desktop Table (Hidden on Mobile) */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-neutral-200 text-sm">
                   <thead>
                     <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-600">
@@ -299,6 +300,56 @@ const AdminAccountsPage = () => {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Cards (Visible on Phones below md) */}
+              <div className="md:hidden divide-y divide-neutral-200">
+                {loading ? (
+                  <div className="text-center py-8 text-neutral-500 text-sm">Loading accounts...</div>
+                ) : filteredAccounts.length === 0 ? (
+                  <div className="text-center py-8 text-neutral-500 text-sm">No accounts found.</div>
+                ) : (
+                  filteredAccounts.map((account) => (
+                    <div key={account.id} className="py-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-neutral-900 text-sm">{account.userName}</div>
+                          <div className="font-mono text-xs text-neutral-500">{account.accountNumber}</div>
+                        </div>
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                          {account.type}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-bank border border-neutral-200">
+                        <div>
+                          <div className="text-[11px] text-neutral-500">Current Balance</div>
+                          <div className="text-base font-bold text-neutral-900">
+                            ${Number(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            onClick={() => openBalanceModal(account)}
+                            className="text-xs px-2.5 py-1.5 flex items-center space-x-1"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Update</span>
+                          </Button>
+                          <button
+                            onClick={() => handleToggleFlag(account)}
+                            className={`p-1.5 rounded transition-colors ${
+                              account.status === 'flagged' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'
+                            }`}
+                            title={account.status === 'flagged' ? 'Unflag Account' : 'Flag Account'}
+                          >
+                            <AlertCircle className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
           </div>

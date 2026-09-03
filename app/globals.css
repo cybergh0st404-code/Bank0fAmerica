@@ -34,10 +34,10 @@
   }
   
   .card {
-    @apply bg-white rounded-card shadow-bank p-6;
+    @apply bg-white rounded-card shadow-bank p-4 sm:p-6;
   }
   
   .card-header {
-    @apply text-xl font-semibold text-primary-navy mb-4;
+    @apply text-lg sm:text-xl font-semibold text-primary-navy mb-3 sm:mb-4;
   }
 }

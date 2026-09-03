@@ -319,7 +319,8 @@ const TransactionHistory = () => {
 
                     {/* Transactions Table */}
                     <Card title={`Transactions (${filteredTransactions.length})`}>
-                      <div className="overflow-x-auto">
+                      {/* Desktop Table (Hidden on Mobile) */}
+                      <div className="hidden md:block overflow-x-auto">
                         <table className="min-w-full divide-y divide-neutral-200">
                           <thead>
                             <tr className="border-b border-neutral-200">
@@ -422,6 +423,71 @@ const TransactionHistory = () => {
                             })}
                           </tbody>
                         </table>
+                      </div>
+
+                      {/* Mobile Cards View (Visible on Phones below md) */}
+                      <div className="md:hidden divide-y divide-neutral-200">
+                        {filteredTransactions.map((transaction) => {
+                          const isCredit = transaction.type === 'credit' || transaction.amount > 0;
+                          return (
+                            <div key={transaction.id} className="py-3.5 space-y-2">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-2.5 min-w-0">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                      isCredit ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                    }`}
+                                  >
+                                    {isCredit ? (
+                                      <ArrowDownRight className="w-4 h-4" />
+                                    ) : (
+                                      <ArrowUpRight className="w-4 h-4" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="font-semibold text-neutral-900 text-sm truncate">
+                                      {transaction.description}
+                                    </div>
+                                    <div className="text-xs text-neutral-500 truncate">
+                                      {transaction.account || 'Checking'} • {transaction.date}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right flex-shrink-0 ml-2">
+                                  <div
+                                    className={`font-bold text-sm ${
+                                      isCredit ? 'text-green-600' : 'text-neutral-900'
+                                    }`}
+                                  >
+                                    {isCredit ? '+' : ''}$
+                                    {Math.abs(transaction.amount).toLocaleString('en-US', {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-400">{transaction.time}</div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-1 border-t border-neutral-100 text-xs">
+                                <span className="px-2 py-0.5 bg-neutral-100 rounded-full text-[11px] font-medium text-neutral-600">
+                                  {transaction.category}
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[11px] font-medium capitalize ${
+                                    transaction.status === 'completed'
+                                      ? 'bg-green-100 text-green-700'
+                                      : transaction.status === 'pending'
+                                      ? 'bg-yellow-100 text-yellow-700'
+                                      : 'bg-red-100 text-red-700'
+                                  }`}
+                                >
+                                  {transaction.status}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </Card>
 
