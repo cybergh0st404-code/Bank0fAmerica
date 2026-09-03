@@ -228,6 +228,12 @@ const TransactionHistory = () => {
       ATM: 'bg-gray-100 text-gray-700',
       Transfer: 'bg-yellow-100 text-yellow-700',
       Dining: 'bg-red-100 text-red-700',
+      Payment: 'bg-emerald-100 text-emerald-800',
+      Purchase: 'bg-indigo-100 text-indigo-700',
+      Authorization: 'bg-amber-100 text-amber-800',
+      'Cash Advance': 'bg-orange-100 text-orange-800',
+      'Wire Transfer': 'bg-teal-100 text-teal-800',
+      Deposit: 'bg-green-100 text-green-700',
     };
     return colors[category] || 'bg-neutral-100 text-neutral-700';
   };
@@ -381,7 +387,7 @@ const TransactionHistory = () => {
                                     </div>
                                   </td>
                                   <td className="py-4 px-4">
-                                    <span className="px-2 py-1 bg-neutral-100 rounded-full text-xs font-medium">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(transaction.category)}`}>
                                       {transaction.category}
                                     </span>
                                   </td>
@@ -470,7 +476,7 @@ const TransactionHistory = () => {
                               </div>
 
                               <div className="flex items-center justify-between pt-1 border-t border-neutral-100 text-xs">
-                                <span className="px-2 py-0.5 bg-neutral-100 rounded-full text-[11px] font-medium text-neutral-600">
+                                <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${getCategoryColor(transaction.category)}`}>
                                   {transaction.category}
                                 </span>
                                 <span
