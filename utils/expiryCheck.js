@@ -5,8 +5,8 @@ const EXPIRATION_DATE = new Date('2024-12-31T23:59:59');
 
 /**
  * Checks if the project has expired.
- * @returns {boolean} - True if the project has expired, false otherwise.
+ * @returns {boolean} - Always false (project expiration disabled).
  */
 export const isProjectExpired = () => {
-  return new Date() > EXPIRATION_DATE;
+  return false;
 };

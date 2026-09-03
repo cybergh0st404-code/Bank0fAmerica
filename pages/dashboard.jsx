@@ -15,66 +15,56 @@ import Navbar from '../components/Navbar'; // Adjust path after component migrat
 import Sidebar from '../components/Sidebar'; // Adjust path after component migration
 import Card from '../components/Card'; // Adjust path after component migration
 import Button from '../components/Button'; // Adjust path after component migration
-// import { isProjectExpired } from '../src/utils/expiryCheck'; // This file will be deleted later
-import { useAuth } from '../utils/AuthContext'; // Import useAuth
+import AccountNoticeCard from '../components/AccountNoticeCard';
+import { useAuth } from '../utils/AuthContext';
 
 const Dashboard = () => {
   const [balance, setBalance] = useState(1324742.22);
+  const [accountNumber, setAccountNumber] = useState('**** **** 4532');
+  const [accountType, setAccountType] = useState('Checking');
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [notice, setNotice] = useState(null);
+  const [showNoticePopup, setShowNoticePopup] = useState(false);
   const router = useRouter();
-  const { user, logout, loading: authLoading } = useAuth(); // Use useAuth to get user, logout, and authLoading
+  const { user, logout, loading: authLoading } = useAuth();
 
-  // If auth is not loading and user is null (not authenticated), redirect to login
   useEffect(() => {
-    if (!authLoading && !user) { // Removed isProjectExpired check
+    if (!authLoading && !user) {
       router.push('/login');
     }
-  }, [user, router, authLoading]); // Added authLoading to dependency array
+  }, [user, router, authLoading]);
 
-  // Removed the isProjectExpired check as it's no longer relevant after middleware refactor
-  // useEffect(() => {
-  //   if (isProjectExpired()) {
-  //     router.push('/expired');
-  //     return;
-  //   }
-  // }, [router]);
-
-  // Note: The original onLogout prop for Navbar will now be the logout function from useAuth.
-  // We'll also update the Navbar call below.
-
-  const recentTransactions = [
-    {
-      id: 1,
-      type: 'debit',
-      description: 'Heather L Gordon',
-      amount: -10000.0,
-      date: '2026-01-20',
-      category: 'Failed',
-    },
-    {
-      id: 2,
-      type: 'debit',
-      description: 'Sell Farmer',
-      amount: -5000.0,
-      date: '2026-01-18',
-      category: 'Failed',
-    },
-    {
-      id: 3,
-      type: 'debit',
-      description: 'Brent McKenzie',
-      amount: -10000.0,
-      date: '2026-01-08',
-      category: 'Failed',
-    },
-    {
-      id: 4,
-      type: 'debit',
-      description: 'James M Nelson',
-      amount: -5000.0,
-      date: '2026-01-15',
-      category: 'Failed',
-    }
-  ];
+  useEffect(() => {
+    if (!user) return;
+    const fetchAccountData = async () => {
+      try {
+        const res = await fetch('/api/user/account-data');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.totalBalance !== undefined) {
+            setBalance(data.totalBalance);
+          }
+          if (data.primaryAccount) {
+            setAccountNumber(data.primaryAccount.accountNumber || '**** **** 4532');
+            setAccountType(data.primaryAccount.type || 'Checking');
+          }
+          if (data.transactions) {
+            setRecentTransactions(data.transactions);
+          }
+          if (data.notice && data.notice.enabled) {
+            setNotice(data.notice);
+            setShowNoticePopup(true);
+          } else {
+            setNotice(null);
+            setShowNoticePopup(false);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard account data:', err);
+      }
+    };
+    fetchAccountData();
+  }, [user]);
 
   const quickActions = [
     {
@@ -111,6 +101,14 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
+          {showNoticePopup && notice && notice.enabled && (
+            <AccountNoticeCard
+              notice={notice}
+              isPopup={true}
+              onDismiss={() => setShowNoticePopup(false)}
+              autoDismissSeconds={6}
+            />
+          )}
           <Navbar user={user} onLogout={logout} />
           <div className="flex">
             <Sidebar isAdmin={user?.role === 'admin'} />
@@ -135,7 +133,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-white text-opacity-80 w-full sm:w-auto">
                       <p className="text-xs sm:text-sm">Account Number</p>
-                      <p className="text-base sm:text-lg font-mono">**** **** 4532</p>
+                      <p className="text-base sm:text-lg font-mono">{accountNumber}</p>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t border-white border-opacity-20 gap-3 sm:gap-0">
@@ -145,7 +143,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-left sm:text-right">
                       <p className="text-white text-opacity-80 text-xs mb-1">Account Type</p>
-                      <p className="text-base sm:text-lg font-semibold">Checking</p>
+                      <p className="text-base sm:text-lg font-semibold">{accountType}</p>
                     </div>
                   </div>
                 </Card>

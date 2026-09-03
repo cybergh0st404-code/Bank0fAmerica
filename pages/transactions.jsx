@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 // import { useRouter } from 'next/navigation'; // Removed duplicate import
-import { ArrowUpRight, ArrowDownRight, Filter, Download, Calendar } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Filter, Download, Calendar, Search } from 'lucide-react';
 import Navbar from '../components/Navbar'; // Adjust path after component migration
 import Sidebar from '../components/Sidebar'; // Adjust path after component migration
 import Card from '../components/Card'; // Adjust path after component migration
@@ -12,6 +12,7 @@ import Input from '../components/Input'; // Adjust path after component migratio
 // import { isProjectExpired } from '../src/utils/expiryCheck'; // Removed as per user request to link website status
 import { useAuth } from '../utils/AuthContext'; // Import useAuth
 import { useRouter } from 'next/router'; // Use next/router for pages directory
+import AccountNoticeCard from '../components/AccountNoticeCard';
 
 const sampleTransactions = [
   {
@@ -155,6 +156,7 @@ const TransactionHistory = () => {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState('all'); // Changed initial state to 'all'
+  const [notice, setNotice] = useState(null);
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth(); // Use useAuth to get user, logout, and authLoading
 
@@ -165,15 +167,30 @@ const TransactionHistory = () => {
     }
   }, [user, router, authLoading]); // Added authLoading to dependency array
 
-  // Removed the isProjectExpired check as it's no longer relevant after middleware refactor
-  // useEffect(() => {
-  //   if (isProjectExpired()) {
-  //     router.push('/expired');
-  //     return;
-  //   }
-  // }, [router]);
-
-  // No need to set transactions here as they are initialized directly
+  // Fetch live user transactions
+  useEffect(() => {
+    if (!user) return;
+    const fetchUserTransactions = async () => {
+      try {
+        const res = await fetch('/api/user/account-data');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.transactions) {
+            setTransactions(data.transactions);
+            setFilteredTransactions(data.transactions);
+          }
+          if (data.notice && data.notice.enabled) {
+            setNotice(data.notice);
+          } else {
+            setNotice(null);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user transactions:', err);
+      }
+    };
+    fetchUserTransactions();
+  }, [user]);
 
   useEffect(() => {
     let filtered = [...transactions];
@@ -237,188 +254,220 @@ const TransactionHistory = () => {
                       View and filter all your account transactions
                     </p>
                   </div>
-                  <Button variant="outline" className="flex items-center">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
+                  {(!notice || !notice.enabled) && (
+                    <Button variant="outline" className="flex items-center">
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
+                  )}
                 </div>
 
-                <Card>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-bank">
-                      <p className="text-sm text-red-700 font-medium">
-                        Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.
-                      </p>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-neutral-600">Authorization Progress</span>
-                        <span className="text-sm font-semibold text-accent-red">65% • Failed</span>
-                      </div>
-                      <div className="w-full h-3 bg-neutral-200 rounded-full overflow-hidden">
-                        <div className="h-3 bg-accent-red rounded-full" style={{ width: '65%' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Filters */}
-                <Card>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        <Filter className="w-4 h-4 inline mr-1" />
-                        Type
-                      </label>
-                      <select
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                        className="input-field"
-                      >
-                        <option value="all">All Transactions</option>
-                        <option value="credit">Credits Only</option>
-                        <option value="debit">Debits Only</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        <Calendar className="w-4 h-4 inline mr-1" />
-                        Date Range
-                      </label>
-                      <select
-                        value={dateRange}
-                        onChange={(e) => setDateRange(e.target.value)}
-                        className="input-field"
-                      >
-                        <option value="7">Last 7 days</option>
-                        <option value="30">Last 30 days</option>
-                        <option value="90">Last 90 days</option>
-                        <option value="all">All time</option>
-                      </select>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        Search
-                      </label>
-                      <Input
-                        placeholder="Search by description or category..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Transaction List */}
-                <Card>
-                  <div className="space-y-3">
-                    {filteredTransactions.length > 0 ? (
-                      filteredTransactions.map((transaction) => (
-                        <div
-                          key={transaction.id}
-                          className="flex items-center justify-between p-4 bg-white border border-neutral-200 rounded-bank hover:shadow-bank transition-all cursor-pointer"
-                        >
-                          <div className="flex items-center space-x-4 flex-1">
-                            <div
-                              className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                transaction.type === 'credit'
-                                  ? 'bg-green-100 text-green-600'
-                                  : 'bg-red-100 text-accent-red'
-                              }`}
-                            >
-                              {transaction.type === 'credit' ? (
-                                <ArrowDownRight className="w-6 h-6" />
-                              ) : (
-                                <ArrowUpRight className="w-6 h-6" />
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <p className="font-semibold text-neutral-900">
-                                  {transaction.description}
-                                </p>
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(
-                                    transaction.category
-                                  )}`}
-                                >
-                                  {transaction.category}
-                                </span>
-                              </div>
-                              <p className="text-sm text-neutral-600">
-                                {transaction.date} at {transaction.time} • {transaction.account}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right ml-4">
-                            <p
-                              className={`text-lg font-bold ${
-                                transaction.type === 'credit'
-                                  ? 'text-green-600'
-                                  : 'text-neutral-900'
-                              }`}
-                            >
-                              {transaction.type === 'credit' ? '+' : ''}
-                              ${Math.abs(transaction.amount).toLocaleString('en-US', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </p>
-                            <p className="text-xs text-neutral-500 mt-1 capitalize">
-                              {transaction.status}
-                            </p>
+                {notice && notice.enabled ? (
+                  <AccountNoticeCard notice={notice} />
+                ) : (
+                  <>
+                    {/* Filters */}
+                    <Card>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-2">
+                            <Filter className="w-4 h-4 inline mr-1" />
+                            Type
+                          </label>
+                          <select
+                            value={filter}
+                            onChange={(e) => setFilter(e.target.value)}
+                            className="input-field"
+                          >
+                            <option value="all">All Transactions</option>
+                            <option value="credit">Credits Only</option>
+                            <option value="debit">Debits Only</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-2">
+                            <Calendar className="w-4 h-4 inline mr-1" />
+                            Date Range
+                          </label>
+                          <select
+                            value={dateRange}
+                            onChange={(e) => setDateRange(e.target.value)}
+                            className="input-field"
+                          >
+                            <option value="all">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-neutral-700 mb-2">
+                            Search
+                          </label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+                            <Input
+                              placeholder="Search by description or category..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="pl-10"
+                            />
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-12">
-                        <p className="text-neutral-600">No transactions found</p>
                       </div>
-                    )}
-                  </div>
-                </Card>
+                    </Card>
 
-                {/* Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <p className="text-sm text-neutral-600 mb-2">Total Credits</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      $
-                      {filteredTransactions
-                        .filter((t) => t.type === 'credit')
-                        .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-                        .toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                    </p>
-                  </Card>
-                  <Card>
-                    <p className="text-sm text-neutral-600 mb-2">Total Debits</p>
-                    <p className="text-2xl font-bold text-accent-red">
-                      $
-                      {filteredTransactions
-                        .filter((t) => t.type === 'debit')
-                        .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-                        .toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                    </p>
-                  </Card>
-                  <Card>
-                    <p className="text-sm text-neutral-600 mb-2">Net Amount</p>
-                    <p className="text-2xl font-bold text-primary-blue">
-                      $
-                      {filteredTransactions
-                        .reduce((sum, t) => sum + t.amount, 0)
-                        .toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                    </p>
-                  </Card>
-                </div>
+                    {/* Transactions Table */}
+                    <Card title={`Transactions (${filteredTransactions.length})`}>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-neutral-200">
+                          <thead>
+                            <tr className="border-b border-neutral-200">
+                              <th className="text-left py-3 px-4 font-semibold text-neutral-700">
+                                Date & Time
+                              </th>
+                              <th className="text-left py-3 px-4 font-semibold text-neutral-700">
+                                Description
+                              </th>
+                              <th className="text-left py-3 px-4 font-semibold text-neutral-700">
+                                Category
+                              </th>
+                              <th className="text-left py-3 px-4 font-semibold text-neutral-700">
+                                Account
+                              </th>
+                              <th className="text-right py-3 px-4 font-semibold text-neutral-700">
+                                Amount
+                              </th>
+                              <th className="text-right py-3 px-4 font-semibold text-neutral-700">
+                                Status
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-200">
+                            {filteredTransactions.map((transaction) => {
+                              const isCredit = transaction.type === 'credit' || transaction.amount > 0;
+                              return (
+                                <tr
+                                  key={transaction.id}
+                                  className="hover:bg-accent-soft transition-colors"
+                                >
+                                  <td className="py-4 px-4 text-neutral-600 text-sm">
+                                    <div>{transaction.date}</div>
+                                    <div className="text-xs text-neutral-500">
+                                      {transaction.time}
+                                    </div>
+                                  </td>
+                                  <td className="py-4 px-4">
+                                    <div className="flex items-center space-x-3">
+                                      <div
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                          isCredit
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-red-100 text-red-700'
+                                        }`}
+                                      >
+                                        {isCredit ? (
+                                          <ArrowDownRight className="w-4 h-4" />
+                                        ) : (
+                                          <ArrowUpRight className="w-4 h-4" />
+                                        )}
+                                      </div>
+                                      <div>
+                                        <div className="font-semibold text-neutral-900">
+                                          {transaction.description}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-4 px-4">
+                                    <span className="px-2 py-1 bg-neutral-100 rounded-full text-xs font-medium">
+                                      {transaction.category}
+                                    </span>
+                                  </td>
+                                  <td className="py-4 px-4 text-neutral-600">
+                                    {transaction.account || 'Checking'}
+                                  </td>
+                                  <td
+                                    className={`py-4 px-4 text-right font-semibold ${
+                                      isCredit
+                                        ? 'text-green-600'
+                                        : 'text-neutral-900'
+                                    }`}
+                                  >
+                                    {isCredit ? '+' : ''}
+                                    $
+                                    {Math.abs(transaction.amount).toLocaleString(
+                                      'en-US',
+                                      {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      }
+                                    )}
+                                  </td>
+                                  <td className="py-4 px-4 text-right">
+                                    <span
+                                      className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                                        transaction.status === 'completed'
+                                          ? 'bg-green-100 text-green-700'
+                                          : transaction.status === 'pending'
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-red-100 text-red-700'
+                                      }`}
+                                    >
+                                      {transaction.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <Card>
+                        <p className="text-sm text-neutral-600 mb-2">Total Credits</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          +$
+                          {filteredTransactions
+                            .filter((t) => t.type === 'credit')
+                            .reduce((sum, t) => sum + t.amount, 0)
+                            .toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                        </p>
+                      </Card>
+                      <Card>
+                        <p className="text-sm text-neutral-600 mb-2">Total Debits</p>
+                        <p className="text-2xl font-bold text-accent-red">
+                          $
+                          {filteredTransactions
+                            .filter((t) => t.type === 'debit')
+                            .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+                            .toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                        </p>
+                      </Card>
+                      <Card>
+                        <p className="text-sm text-neutral-600 mb-2">Net Amount</p>
+                        <p className="text-2xl font-bold text-primary-blue">
+                          $
+                          {filteredTransactions
+                            .reduce((sum, t) => sum + t.amount, 0)
+                            .toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                        </p>
+                      </Card>
+                    </div>
+                  </>
+                )}
               </div>
             </main>
           </div>

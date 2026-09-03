@@ -9,6 +9,7 @@ import Card from '../components/Card'; // Adjust path after component migration
 import Button from '../components/Button'; // Adjust path after component migration
 import Input from '../components/Input'; // Adjust path after component migration
 import { useAuth } from '../utils/AuthContext';
+import AccountNoticeCard from '../components/AccountNoticeCard';
 //import { isProjectExpired } from '../src/utils/expiryCheck';
 
 const Transfer = () => {
@@ -18,8 +19,29 @@ const Transfer = () => {
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [notice, setNotice] = useState(null);
    
   const router = useRouter();
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchAccountData = async () => {
+      try {
+        const res = await fetch('/api/user/account-data');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.notice && data.notice.enabled) {
+            setNotice(data.notice);
+          } else {
+            setNotice(null);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching transfer account data:', err);
+      }
+    };
+    fetchAccountData();
+  }, [user]);
 
   // useEffect(() => {
   //   if (isProjectExpired()) {
@@ -78,8 +100,12 @@ const Transfer = () => {
               <p className="text-neutral-600">Send money securely to another account</p>
             </div>
 
-            {/* Progress Steps */}
-            <div className="flex items-center justify-between mb-8">
+            {notice && notice.enabled ? (
+              <AccountNoticeCard notice={notice} />
+            ) : (
+              <>
+                {/* Progress Steps */}
+                <div className="flex items-center justify-between mb-8">
               {[
                 { num: 1, label: 'Select Recipient' },
                 { num: 2, label: 'Enter Amount' },
@@ -284,6 +310,8 @@ const Transfer = () => {
                   </div>
                 </div>
               </Card>
+            )}
+              </>
             )}
           </div>
         </main>

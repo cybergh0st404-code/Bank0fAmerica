@@ -76,6 +76,6 @@ export const config = {
      * - /api/auth (authentication API routes)
      * - /api/website-status (public API for website status)
      */
-    '/((?!_next/static|_next/image|favicon.ico|api/auth|api/website-status).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api).*)',
   ],
 };
