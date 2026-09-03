@@ -274,6 +274,9 @@ const AdminUsersPage = () => {
         }),
       });
       if (res.ok) {
+        setUsersList((prev) =>
+          prev.map((u) => (u.id === noticeUser.id ? { ...u, notice: { ...noticeForm } } : u))
+        );
         alert(`Notice settings for ${noticeUser.name} updated successfully!`);
         setShowNoticeModal(false);
         fetchUsers();

@@ -10,6 +10,7 @@ import {
   FileText,
   TrendingUp,
   TrendingDown,
+  AlertCircle,
 } from 'lucide-react';
 import Navbar from '../components/Navbar'; // Adjust path after component migration
 import Sidebar from '../components/Sidebar'; // Adjust path after component migration
@@ -123,6 +124,29 @@ const Dashboard = () => {
                     Here's an overview of your accounts and recent activity
                   </p>
                 </div>
+
+                {/* Notice Warning Banner if enabled */}
+                {notice && notice.enabled && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-bank flex items-start space-x-3 mb-6 animate-fade-in shadow-sm">
+                    <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center text-accent-red flex-shrink-0 mt-0.5">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                        <h4 className="text-sm font-bold text-red-900">{notice.progressLabel || 'Account Authorization Warning'}</h4>
+                        <span className="text-xs font-bold text-accent-red bg-red-100 px-2.5 py-0.5 rounded-full">
+                          {notice.progressStatus || `${notice.progress}% • Failed`}
+                        </span>
+                      </div>
+                      <p className="text-sm text-red-800 font-medium leading-relaxed">
+                        {notice.message}
+                      </p>
+                      <div className="w-full h-2.5 bg-red-200 rounded-full mt-2.5 overflow-hidden">
+                        <div className="h-full bg-accent-red rounded-full" style={{ width: `${notice.progress || 65}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Account Summary Card */}
                 <Card className="bg-gradient-to-br from-primary-navy to-primary-blue text-white shadow-bank-lg">

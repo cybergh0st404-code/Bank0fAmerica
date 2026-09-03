@@ -1,5 +1,8 @@
 import { getBankData, saveBankData } from '../../../../lib/db';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -13,7 +16,11 @@ export async function GET(request) {
 
     return new Response(JSON.stringify({ transactions: txs }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, max-age=0, must-revalidate',
+        'Pragma': 'no-cache',
+      },
     });
   } catch (err) {
     console.error('Error fetching admin transactions:', err);

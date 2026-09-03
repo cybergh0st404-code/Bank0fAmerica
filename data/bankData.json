@@ -177,7 +177,7 @@
       "address": "",
       "createdAt": "2026-09-03",
       "notice": {
-        "enabled": false,
+        "enabled": true,
         "message": "Note:Transfers canceled,link card for secure and fast payment.We may need to contact card holder to verify payment.",
         "progress": 65,
         "progressStatus": "65% • Failed",

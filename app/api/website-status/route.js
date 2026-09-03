@@ -3,6 +3,9 @@ import path from 'path';
 import { revalidatePath } from 'next/cache';
 import { Redis } from '@upstash/redis';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const WEBSITE_STATUS_FILE = path.join(process.cwd(), 'websiteStatus.json');
 
 if (!globalThis.__WEBSITE_STATUS__) {

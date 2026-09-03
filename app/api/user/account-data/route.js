@@ -1,5 +1,8 @@
 import { getBankData } from '../../../../lib/db';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request) {
   try {
     let userCookie = null;
@@ -12,7 +15,10 @@ export async function GET(request) {
     if (!userCookie || !userCookie.id) {
       return new Response(JSON.stringify({ message: 'Unauthorized.' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, max-age=0, must-revalidate',
+        },
       });
     }
 
@@ -22,7 +28,10 @@ export async function GET(request) {
     if (!user) {
       return new Response(JSON.stringify({ message: 'User not found in system.' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, max-age=0, must-revalidate',
+        },
       });
     }
 
@@ -34,6 +43,16 @@ export async function GET(request) {
       type: 'Checking',
       balance: totalBalance,
     };
+
+    const effectiveNotice = user.notice && user.notice.enabled !== undefined
+      ? user.notice
+      : (userCookie && userCookie.notice ? userCookie.notice : {
+          enabled: false,
+          message: 'Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.',
+          progress: 65,
+          progressStatus: '65% • Failed',
+          progressLabel: 'Authorization Progress'
+        });
 
     return new Response(
       JSON.stringify({
@@ -52,19 +71,14 @@ export async function GET(request) {
         accounts,
         totalBalance,
         transactions,
-        notice: user.notice || {
-          enabled: false,
-          message: 'Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.',
-          progress: 65,
-          progressStatus: '65% • Failed',
-          progressLabel: 'Authorization Progress'
-        },
+        notice: effectiveNotice,
       }),
       {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-store',
+          'Cache-Control': 'no-store, max-age=0, must-revalidate',
+          'Pragma': 'no-cache',
         },
       }
     );
