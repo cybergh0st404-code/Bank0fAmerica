@@ -62,6 +62,11 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
+  // Redirect unauthenticated visitors from root directly to login
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   // Protect dashboard and other user pages
   if (['/dashboard', '/transfer', '/transactions', '/cards', '/statements', '/wire-transfer', '/bill-pay', '/deposit', '/credit-score', '/security', '/messages', '/settings'].includes(pathname)) {
     if (!isAuthenticated) {

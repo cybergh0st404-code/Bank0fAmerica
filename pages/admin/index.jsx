@@ -97,7 +97,7 @@ const AdminUsersPage = () => {
   // Redirect non-admins
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'admin')) {
-      router.push('/');
+      router.push('/login');
     }
   }, [user, router, authLoading]);
 

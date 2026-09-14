@@ -32,12 +32,13 @@ const Login = () => {
       });
       const data = await res.json();
       if (!res.ok) {
-        router.push('/404');
+        setError(data.message || 'Invalid credentials.');
         setLoading(false);
         return;
       }
       if (data.require2fa) {
         setShow2FA(true);
+        setError('');
         setLoading(false);
         return;
       }
@@ -146,6 +147,11 @@ const Login = () => {
                     required
                   />
                 </div>
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-bank text-red-700 text-sm">
+                    {error}
+                  </div>
+                )}
                 <Button
                   type="submit"
                   className="w-full mb-3"
@@ -158,6 +164,7 @@ const Login = () => {
                   onClick={() => {
                     setShow2FA(false);
                     setTwoFactorCode('');
+                    setError('');
                   }}
                   className="w-full text-sm text-primary-blue hover:underline"
                 >
