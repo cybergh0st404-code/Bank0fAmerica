@@ -43,7 +43,7 @@ const AccountNoticeCard = ({
                 <ShieldAlert className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-primary-navy">Account Authorization Alert</h3>
+                <h3 className="text-lg font-bold text-primary-navy">{notice.title || "Account Authorization Alert"}</h3>
                 <p className="text-xs text-neutral-500">Security & Authorization Requirement</p>
               </div>
             </div>
@@ -60,7 +60,7 @@ const AccountNoticeCard = ({
           <div className="p-4 bg-red-50 border border-red-200 rounded-bank mb-5">
             <div className="flex items-start space-x-2.5">
               <AlertCircle className="w-5 h-5 text-accent-red flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800 font-medium leading-relaxed">
+              <p className="text-sm text-red-800 font-medium leading-relaxed whitespace-pre-line">
                 {message}
               </p>
             </div>
@@ -106,7 +106,7 @@ const AccountNoticeCard = ({
             <ShieldAlert className="w-8 h-8" />
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-primary-navy mb-1">Access Restricted</h2>
+            <h2 className="text-2xl font-bold text-primary-navy mb-1">{notice.title || "Access Restricted"}</h2>
             <p className="text-neutral-600 text-sm">
               Account authorization required to view or execute operations on this page.
             </p>
@@ -117,7 +117,7 @@ const AccountNoticeCard = ({
         <div className="p-5 bg-red-50 border border-red-200 rounded-bank mb-6">
           <div className="flex items-start space-x-3">
             <AlertCircle className="w-6 h-6 text-accent-red flex-shrink-0 mt-0.5 hidden sm:block" />
-            <p className="text-sm sm:text-base text-red-900 font-medium leading-relaxed">
+            <p className="text-sm sm:text-base text-red-900 font-medium leading-relaxed whitespace-pre-line">
               {message}
             </p>
           </div>

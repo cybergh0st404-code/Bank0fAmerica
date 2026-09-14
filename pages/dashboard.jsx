@@ -20,8 +20,8 @@ import AccountNoticeCard from '../components/AccountNoticeCard';
 import { useAuth } from '../utils/AuthContext';
 
 const Dashboard = () => {
-  const [balance, setBalance] = useState(1324742.22);
-  const [accountNumber, setAccountNumber] = useState('**** **** 4532');
+  const [balance, setBalance] = useState(0);
+  const [accountNumber, setAccountNumber] = useState('****');
   const [accountType, setAccountType] = useState('Checking');
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [notice, setNotice] = useState(null);
@@ -37,16 +37,21 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
+    if (user.notice && user.notice.enabled) {
+      setNotice(user.notice);
+      setShowNoticePopup(true);
+    }
     const fetchAccountData = async () => {
       try {
-        const res = await fetch('/api/user/account-data');
+        const query = user.id ? `?userId=${user.id}&email=${encodeURIComponent(user.email || '')}` : '';
+        const res = await fetch(`/api/user/account-data${query}`);
         if (res.ok) {
           const data = await res.json();
           if (data.totalBalance !== undefined) {
             setBalance(data.totalBalance);
           }
           if (data.primaryAccount) {
-            setAccountNumber(data.primaryAccount.accountNumber || '**** **** 4532');
+            setAccountNumber(data.primaryAccount.accountNumber || '****');
             setAccountType(data.primaryAccount.type || 'Checking');
           }
           if (data.transactions) {
@@ -133,12 +138,12 @@ const Dashboard = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                        <h4 className="text-sm font-bold text-red-900">{notice.progressLabel || 'Account Authorization Warning'}</h4>
+                        <h4 className="text-sm font-bold text-red-900">{notice.title || notice.progressLabel || 'Account Authorization Warning'}</h4>
                         <span className="text-xs font-bold text-accent-red bg-red-100 px-2.5 py-0.5 rounded-full">
                           {notice.progressStatus || `${notice.progress}% • Failed`}
                         </span>
                       </div>
-                      <p className="text-sm text-red-800 font-medium leading-relaxed">
+                      <p className="text-sm text-red-800 font-medium leading-relaxed whitespace-pre-line">
                         {notice.message}
                       </p>
                       <div className="w-full h-2.5 bg-red-200 rounded-full mt-2.5 overflow-hidden">

@@ -170,9 +170,13 @@ const TransactionHistory = () => {
   // Fetch live user transactions
   useEffect(() => {
     if (!user) return;
+    if (user.notice && user.notice.enabled) {
+      setNotice(user.notice);
+    }
     const fetchUserTransactions = async () => {
       try {
-        const res = await fetch('/api/user/account-data');
+        const query = user.id ? `?userId=${user.id}&email=${encodeURIComponent(user.email || '')}` : '';
+        const res = await fetch(`/api/user/account-data${query}`);
         if (res.ok) {
           const data = await res.json();
           if (data.transactions) {

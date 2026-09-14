@@ -5,7 +5,14 @@ export async function middleware(request) {
   const isAuthenticated = request.cookies.get('isAuthenticated')?.value === 'true';
   let userRole = null;
   try {
-    userRole = JSON.parse(request.cookies.get('user')?.value || '{}').role;
+    const rawUser = request.cookies.get('user')?.value;
+    if (rawUser) {
+      try {
+        userRole = JSON.parse(decodeURIComponent(rawUser)).role;
+      } catch {
+        userRole = JSON.parse(rawUser).role;
+      }
+    }
   } catch (_) {
     userRole = null;
   }

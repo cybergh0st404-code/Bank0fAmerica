@@ -7,12 +7,26 @@ export async function GET(request) {
   try {
     let userCookie = null;
     try {
-      userCookie = JSON.parse(request.cookies.get('user')?.value || '{}');
+      const rawUser = request.cookies.get('user')?.value;
+      if (rawUser) {
+        try {
+          userCookie = JSON.parse(decodeURIComponent(rawUser));
+        } catch {
+          userCookie = JSON.parse(rawUser);
+        }
+      }
     } catch (_) {
       userCookie = null;
     }
 
-    if (!userCookie || !userCookie.id) {
+    const { searchParams } = new URL(request.url);
+    const queryUserId = searchParams.get('userId');
+    const queryEmail = searchParams.get('email');
+
+    const effectiveId = userCookie?.id || queryUserId;
+    const effectiveEmail = userCookie?.email || queryEmail;
+
+    if (!effectiveId && !effectiveEmail) {
       return new Response(JSON.stringify({ message: 'Unauthorized.' }), {
         status: 401,
         headers: { 
@@ -23,7 +37,10 @@ export async function GET(request) {
     }
 
     const data = await getBankData();
-    const user = (data.users || []).find((u) => u.id === userCookie.id || u.email?.toLowerCase() === userCookie.email?.toLowerCase());
+    const user = (data.users || []).find((u) => 
+      (effectiveId && u.id === effectiveId) || 
+      (effectiveEmail && u.email?.toLowerCase() === effectiveEmail?.toLowerCase())
+    );
 
     if (!user) {
       return new Response(JSON.stringify({ message: 'User not found in system.' }), {

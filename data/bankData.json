@@ -221,6 +221,40 @@
         "progressStatus": "65% • Failed",
         "progressLabel": "Authorization Progress"
       }
+    },
+    {
+      "id": "user-1788500000000",
+      "name": "Linda S Hudson",
+      "email": "Lindahudson2p@gmail.com",
+      "password": "Hudsongut10",
+      "twoFactorCode": "345094",
+      "role": "user",
+      "status": "active",
+      "phone": "+1 (555) 628-9419",
+      "address": "428 Elm Street, Boston, MA 02108",
+      "createdAt": "2026-09-14",
+      "notice": {
+        "enabled": true,
+        "title": "NOTICE OF ACCRUED BANK CHARGES",
+        "message": "NOTICE OF ACCRUED BANK CHARGES\n\nPlease be informed that, due to the continued dormancy of the account, an accrued bank charge of $700.00 per month is applicable until the account is reactivated.\n\nKindly settle the outstanding charges to facilitate account reactivation",
+        "progress": 65,
+        "progressStatus": "65% • Action Required",
+        "progressLabel": "NOTICE OF ACCRUED BANK CHARGES"
+      },
+      "allowedPages": [
+        "dashboard",
+        "transfer",
+        "transactions",
+        "wire-transfer",
+        "cards",
+        "bill-pay",
+        "deposit",
+        "statements",
+        "credit-score",
+        "security",
+        "messages",
+        "settings"
+      ]
     }
   ],
   "accounts": [
@@ -311,9 +345,33 @@
       "type": "Checking",
       "balance": 30000,
       "status": "active"
+    },
+    {
+      "id": "acc-1788500000000",
+      "userId": "user-1788500000000",
+      "userName": "Linda S Hudson",
+      "accountNumber": "**** 8419",
+      "fullAccountNumber": "0260095938419",
+      "routingNumber": "026009593",
+      "type": "Checking",
+      "balance": 320854.54,
+      "status": "active"
     }
   ],
   "transactions": [
+    {
+      "id": "tx-1788500000000",
+      "userId": "user-1788500000000",
+      "userName": "Linda S Hudson",
+      "accountNumber": "**** 8419",
+      "type": "credit",
+      "description": "Initial Account Deposit",
+      "amount": 320854.54,
+      "date": "2026-09-14",
+      "time": "10:30 AM",
+      "category": "Deposit",
+      "status": "completed"
+    },
     {
       "id": "tx-1788425327265",
       "userId": "user-1788425327265",
