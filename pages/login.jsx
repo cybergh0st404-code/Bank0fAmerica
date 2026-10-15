@@ -43,9 +43,14 @@ const Login = () => {
         return;
       }
       if (data.user) {
+        if (data.user.role === 'admin') {
+          setError('Invalid credentials.');
+          setLoading(false);
+          return;
+        }
         login(data.user);
         setLoading(false);
-        router.push(data.user.role === 'admin' ? '/admin' : '/dashboard');
+        router.push('/dashboard');
         return;
       }
       setError('Unexpected response.');

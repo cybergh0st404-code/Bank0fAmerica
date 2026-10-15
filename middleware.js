@@ -21,9 +21,9 @@ export async function middleware(request) {
   const secretSlug = process.env.ADMIN_SECRET_SLUG || 'adm_s3cret_lg0g4h2j3k4l5m6n';
   const isAdminLogin = pathname === `/admin/${secretSlug}/login`;
 
-  // Explicitly block /admin/login and redirect to 404
+  // Explicitly block /admin/login and rewrite to 404
   if (pathname === '/admin/login') {
-    return NextResponse.redirect(new URL('/404', request.url));
+    return NextResponse.rewrite(new URL('/404', request.url));
   }
 
   // Fetch live website status from the status API
@@ -75,10 +75,10 @@ export async function middleware(request) {
   }
 
   // Protect all /admin routes (excluding the secret admin login route)
-  // If not authenticated as admin, redirect to 404 (pretend the route doesn't exist)
+  // If not authenticated as admin, rewrite to 404 (pretend the route doesn't exist)
   if (pathname.startsWith('/admin') && !isAdminLogin) {
     if (!isAuthenticated || userRole !== 'admin') {
-      return NextResponse.redirect(new URL('/404', request.url));
+      return NextResponse.rewrite(new URL('/404', request.url));
     }
   }
 
