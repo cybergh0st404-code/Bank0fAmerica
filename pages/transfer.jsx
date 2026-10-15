@@ -16,9 +16,11 @@ const Transfer = () => {
   const { user, logout } = useAuth();
   const [step, setStep] = useState(1);
   const [selectedRecipient, setSelectedRecipient] = useState(null);
+  const [recipientName, setRecipientName] = useState('');
+  const [recipientAccount, setRecipientAccount] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
   const [notice, setNotice] = useState(null);
    
   const router = useRouter();
@@ -47,29 +49,14 @@ const Transfer = () => {
     fetchAccountData();
   }, [user]);
 
-  // useEffect(() => {
-  //   if (isProjectExpired()) {
-  //     router.push('/expired');
-  //     return;
-  //   }
-  // }, [router]);
-
-  const recipients = [
-    { id: 1, name: 'Sarah Johnson', account: '**** 5678', email: 'sarah.j@email.com' },
-    { id: 2, name: 'Michael Chen', account: '**** 9012', email: 'm.chen@email.com' },
-    { id: 3, name: 'Emily Davis', account: '**** 3456', email: 'emily.d@email.com' },
-    { id: 4, name: 'David Wilson', account: '**** 7890', email: 'd.wilson@email.com' },
-  ];
-
-  const filteredRecipients = recipients.filter(
-    (r) =>
-      r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const handleTransfer = () => {
     if (step === 1) {
-      if (selectedRecipient) {
+      if (recipientName.trim() && recipientAccount.trim()) {
+        setSelectedRecipient({
+          name: recipientName.trim(),
+          account: recipientAccount.trim(),
+          email: recipientEmail.trim() || 'N/A',
+        });
         setStep(2);
       }
     } else if (step === 2) {
@@ -141,46 +128,46 @@ const Transfer = () => {
 
             {/* Step 1: Select Recipient */}
             {step === 1 && (
-              <Card title="Select Recipient" subtitle="Choose who you want to send money to">
-                <div className="mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+              <Card title="Recipient Information" subtitle="Enter recipient account details">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      Recipient Full Name <span className="text-accent-red">*</span>
+                    </label>
                     <Input
-                      placeholder="Search by name or email..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      placeholder="Enter recipient's full name"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      required
                     />
                   </div>
-                </div>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {filteredRecipients.map((recipient) => (
-                    <button
-                      key={recipient.id}
-                      onClick={() => setSelectedRecipient(recipient)}
-                      className={`w-full p-4 rounded-bank border-2 text-left transition-all ${
-                        selectedRecipient?.id === recipient.id
-                          ? 'border-primary-blue bg-blue-50'
-                          : 'border-neutral-200 hover:border-primary-blue hover:bg-accent-soft'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-primary-blue rounded-full flex items-center justify-center text-white font-semibold">
-                          {recipient.name.charAt(0)}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-neutral-900">{recipient.name}</p>
-                          <p className="text-sm text-neutral-600">{recipient.email}</p>
-                          <p className="text-xs text-neutral-500 mt-1">Account: {recipient.account}</p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      Account / Routing Number <span className="text-accent-red">*</span>
+                    </label>
+                    <Input
+                      placeholder="Enter account or routing number"
+                      value={recipientAccount}
+                      onChange={(e) => setRecipientAccount(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      Recipient Email (Optional notification)
+                    </label>
+                    <Input
+                      type="email"
+                      placeholder="recipient@example.com"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div className="mt-6">
                   <Button
                     onClick={handleTransfer}
-                    disabled={!selectedRecipient}
+                    disabled={!recipientName.trim() || !recipientAccount.trim()}
                     className="w-full"
                   >
                     Continue

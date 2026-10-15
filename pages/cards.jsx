@@ -164,7 +164,7 @@ const CardsPage = () => {
                       <div>
                         <div className="text-[10px] text-blue-300 uppercase tracking-wider">Cardholder</div>
                         <div className="font-semibold text-sm sm:text-base tracking-wider uppercase">
-                          {user?.name || 'PATTCH P JONES'}
+                          {user?.name || 'CARDHOLDER'}
                         </div>
                       </div>
 

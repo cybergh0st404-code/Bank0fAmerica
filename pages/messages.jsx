@@ -66,7 +66,7 @@ const MessagesPage = () => {
       time: '09:00 AM',
       unread: false,
       category: 'Notices',
-      body: `Dear Valued Client,\n\nWelcome to your customized Bank of America online banking portal. Your checking account **** 4532 and linked card facilities are now provisioned.\n\nAs a preferred account holder, you have direct access to your dedicated relationship manager, wire transfers, e-statements, and our 24/7 security monitoring team.\n\nThank you for choosing Bank of America.\n\nSincerely,\nExecutive Client Care Division\nBank of America, N.A.`
+      body: `Dear Valued Client,\n\nWelcome to your customized Bank of America online banking portal. Your accounts and linked card facilities are now active and provisioned.\n\nAs a preferred account holder, you have direct access to your relationship manager, wire transfers, e-statements, and our 24/7 security monitoring team.\n\nThank you for choosing Bank of America.\n\nSincerely,\nExecutive Client Care Division\nBank of America, N.A.`
     },
     {
       id: 'msg-2',

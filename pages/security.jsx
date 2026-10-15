@@ -56,8 +56,7 @@ const SecurityPage = () => {
   }, [user]);
 
   const activeSessions = [
-    { id: 1, device: 'Windows PC • Chrome 128.0', location: 'New York, NY, USA', ip: '192.168.1.45', current: true, time: 'Active now' },
-    { id: 2, device: 'iPhone 15 Pro • Mobile Safari', location: 'New York, NY, USA', ip: '172.56.21.90', current: false, time: '2 hours ago' },
+    { id: 1, device: typeof navigator !== 'undefined' ? navigator.userAgent.split(') ')[0] + ')' : 'Current Browser', location: 'Secure Network', ip: 'Verified Session', current: true, time: 'Active now' },
   ];
 
   const securityLog = [

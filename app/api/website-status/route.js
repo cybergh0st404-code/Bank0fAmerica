@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { revalidatePath } from 'next/cache';
-import { Redis } from '@upstash/redis';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,19 +9,6 @@ const WEBSITE_STATUS_FILE = path.join(process.cwd(), 'websiteStatus.json');
 
 if (!globalThis.__WEBSITE_STATUS__) {
   globalThis.__WEBSITE_STATUS__ = { isOpen: true, updatedAt: new Date().toISOString() };
-}
-
-const hasRedis = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
-let redisClient = null;
-if (hasRedis) {
-  try {
-    redisClient = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    });
-  } catch (e) {
-    redisClient = null;
-  }
 }
 
 const initializeStatusFile = async () => {
@@ -43,9 +29,7 @@ const initializeStatusFile = async () => {
       await fs.writeFile(WEBSITE_STATUS_FILE, JSON.stringify(initial, null, 2));
       globalThis.__WEBSITE_STATUS__ = initial;
       console.log('websiteStatus.json initialized.');
-    } catch (_) {
-
-    }
+    } catch (_) { }
   }
 };
 
@@ -114,12 +98,7 @@ export async function PUT(request) {
       console.error('Error writing websiteStatus.json:', fsErr);
     }
 
-    if (redisClient) {
-      redisClient.set('maintenance:status', JSON.stringify(newStatus)).catch(() => {});
-    }
-
     console.log(`Website status set to: ${isOpen}`);
-
     revalidatePath('/', 'layout');
 
     return new Response(JSON.stringify(newStatus), {

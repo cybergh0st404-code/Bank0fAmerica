@@ -64,14 +64,14 @@ const StatementsPage = () => {
   };
 
   const statements2026 = [
-    { id: 'st-01-26', month: 'January 2026', period: 'Jan 01, 2026 - Jan 31, 2026', size: '1.4 MB', closingBal: '$1,324,742.22' },
-    { id: 'st-02-26', month: 'February 2026', period: 'Feb 01, 2026 - Feb 28, 2026', size: '1.2 MB', closingBal: '$1,324,742.22' },
+    { id: 'st-01-26', month: 'January 2026', period: 'Jan 01, 2026 - Jan 31, 2026', size: '1.4 MB', closingBal: 'Official Statement' },
+    { id: 'st-02-26', month: 'February 2026', period: 'Feb 01, 2026 - Feb 28, 2026', size: '1.2 MB', closingBal: 'Official Statement' },
   ];
 
   const statements2025 = [
-    { id: 'st-12-25', month: 'December 2025', period: 'Dec 01, 2025 - Dec 31, 2025', size: '1.6 MB', closingBal: '$1,349,742.22' },
-    { id: 'st-11-25', month: 'November 2025', period: 'Nov 01, 2025 - Nov 30, 2025', size: '1.5 MB', closingBal: '$1,335,120.00' },
-    { id: 'st-10-25', month: 'October 2025', period: 'Oct 01, 2025 - Oct 31, 2025', size: '1.3 MB', closingBal: '$1,310,000.50' },
+    { id: 'st-12-25', month: 'December 2025', period: 'Dec 01, 2025 - Dec 31, 2025', size: '1.6 MB', closingBal: 'Official Statement' },
+    { id: 'st-11-25', month: 'November 2025', period: 'Nov 01, 2025 - Nov 30, 2025', size: '1.5 MB', closingBal: 'Official Statement' },
+    { id: 'st-10-25', month: 'October 2025', period: 'Oct 01, 2025 - Oct 31, 2025', size: '1.3 MB', closingBal: 'Official Statement' },
   ];
 
   const taxDocuments = [

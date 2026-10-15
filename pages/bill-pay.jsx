@@ -27,11 +27,13 @@ const BillPayPage = () => {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
 
-  const [selectedPayee, setSelectedPayee] = useState(1);
+  const [billerName, setBillerName] = useState('');
+  const [billerAccount, setBillerAccount] = useState('');
   const [payAmount, setPayAmount] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [autoPay, setAutoPay] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [recentPayments, setRecentPayments] = useState([]);
   const [notice, setNotice] = useState(null);
 
   useEffect(() => {
@@ -60,26 +62,27 @@ const BillPayPage = () => {
     fetchAccountData();
   }, [user]);
 
-  const payees = [
-    { id: 1, name: 'ConEdison Electric & Gas', category: 'Utilities', icon: Zap, acct: '•••• 9812', nextDue: 'Sep 15, 2026', dueAmount: '$142.50' },
-    { id: 2, name: 'Verizon Fios Broadband', category: 'Telecom', icon: Wifi, acct: '•••• 3341', nextDue: 'Sep 18, 2026', dueAmount: '$89.99' },
-    { id: 3, name: 'MetLife Home Insurance', category: 'Insurance', icon: Home, acct: '•••• 7702', nextDue: 'Oct 01, 2026', dueAmount: '$320.00' },
-  ];
-
-  const recentPayments = [
-    { id: 'bp-901', payee: 'ConEdison Electric & Gas', date: 'Aug 14, 2026', amount: '$138.20', status: 'Delivered', conf: 'BOFA-BP-4912' },
-    { id: 'bp-902', payee: 'Verizon Fios Broadband', date: 'Aug 17, 2026', amount: '$89.99', status: 'Delivered', conf: 'BOFA-BP-8812' },
-    { id: 'bp-903', payee: 'MetLife Home Insurance', date: 'Jul 01, 2026', amount: '$320.00', status: 'Delivered', conf: 'BOFA-BP-2091' },
-  ];
-
   const handlePay = (e) => {
     e.preventDefault();
+    if (!billerName.trim() || !payAmount) return;
+
     setSubmitting(true);
     setTimeout(() => {
-      alert(`Payment of $${parseFloat(payAmount).toFixed(2)} to ${payees.find(p => p.id === selectedPayee)?.name} scheduled successfully!`);
+      const newPayment = {
+        id: `bp-${Date.now()}`,
+        payee: billerName.trim(),
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        amount: `$${parseFloat(payAmount).toFixed(2)}`,
+        status: 'Scheduled',
+        conf: `BOFA-BP-${Math.floor(1000 + Math.random() * 9000)}`,
+      };
+      setRecentPayments((prev) => [newPayment, ...prev]);
+      alert(`Payment of $${parseFloat(payAmount).toFixed(2)} to ${billerName.trim()} scheduled successfully!`);
       setSubmitting(false);
       setPayAmount('');
-    }, 1200);
+      setBillerName('');
+      setBillerAccount('');
+    }, 1000);
   };
 
   return (
@@ -101,50 +104,31 @@ const BillPayPage = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                {/* Payees List & Payment Form */}
+                {/* Payment Form */}
                 <div className="lg:col-span-7 space-y-6">
-                  
-                  {/* Select Payee */}
-                  <Card title="Select Payee or Company" subtitle="Choose an enrolled billing service">
-                    <div className="space-y-3">
-                      {payees.map((p) => {
-                        const Icon = p.icon;
-                        const isSelected = selectedPayee === p.id;
-                        return (
-                          <div
-                            key={p.id}
-                            onClick={() => {
-                              setSelectedPayee(p.id);
-                              setPayAmount(p.dueAmount.replace('$', ''));
-                            }}
-                            className={`p-4 rounded-bank border cursor-pointer transition-all flex items-center justify-between ${
-                              isSelected
-                                ? 'border-primary-blue bg-blue-50 ring-2 ring-primary-blue'
-                                : 'border-neutral-200 bg-white hover:bg-neutral-50'
-                            }`}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 rounded-full bg-blue-100 text-primary-blue flex items-center justify-center">
-                                <Icon className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <div className="font-bold text-sm text-neutral-900">{p.name}</div>
-                                <div className="text-xs text-neutral-500">{p.category} • Acct {p.acct}</div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xs text-neutral-500">Due {p.nextDue}</div>
-                              <div className="text-sm font-bold text-primary-navy">{p.dueAmount}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
-
-                  {/* Payment Details Form */}
-                  <Card title="Payment Details" subtitle="Send payment from your Checking Account **** 4532">
+                  <Card title="Schedule a Bill Payment" subtitle="Enter biller information and payment amount">
                     <form onSubmit={handlePay} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 mb-1">Biller / Company Name *</label>
+                        <Input
+                          type="text"
+                          required
+                          placeholder="e.g. Electric Utility, Telecom, Insurance"
+                          value={billerName}
+                          onChange={(e) => setBillerName(e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 mb-1">Biller Account / Reference Number</label>
+                        <Input
+                          type="text"
+                          placeholder="Account number from your bill"
+                          value={billerAccount}
+                          onChange={(e) => setBillerAccount(e.target.value)}
+                        />
+                      </div>
+
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700 mb-1">Payment Amount ($) *</label>
                         <div className="relative">
@@ -178,44 +162,49 @@ const BillPayPage = () => {
                               onChange={(e) => setAutoPay(e.target.checked)}
                               className="rounded text-primary-blue focus:ring-primary-blue h-4 w-4"
                             />
-                            <span>Enroll this bill in AutoPay</span>
+                            <span>Enroll in recurring AutoPay</span>
                           </label>
                         </div>
                       </div>
 
                       <div className="pt-4 border-t border-neutral-200 flex justify-end">
-                        <Button type="submit" disabled={submitting} className="px-6 py-2.5">
+                        <Button type="submit" disabled={submitting || !billerName.trim() || !payAmount} className="px-6 py-2.5">
                           {submitting ? 'Submitting Payment...' : 'Schedule Payment'}
                         </Button>
                       </div>
                     </form>
                   </Card>
-
                 </div>
 
                 {/* Right Column: Payment History & Guarantees */}
                 <div className="lg:col-span-5 space-y-6">
                   
-                  <Card title="Past Bill Deliveries" subtitle="Recently cleared utility payments">
-                    <div className="divide-y divide-neutral-100 text-sm">
-                      {recentPayments.map((item) => (
-                        <div key={item.id} className="py-3.5 space-y-1">
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold text-neutral-900 text-xs sm:text-sm">{item.payee}</span>
-                            <span className="font-bold text-neutral-900">{item.amount}</span>
+                  <Card title="Past Bill Deliveries" subtitle="Cleared utility and provider payments">
+                    {recentPayments.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-neutral-400">
+                        No previous bill payments on record.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-neutral-100 text-sm">
+                        {recentPayments.map((item) => (
+                          <div key={item.id} className="py-3.5 space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-neutral-900 text-xs sm:text-sm">{item.payee}</span>
+                              <span className="font-bold text-neutral-900">{item.amount}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs text-neutral-500">
+                              <span>Paid on {item.date}</span>
+                              <span className="text-green-700 bg-green-50 px-2 py-0.5 rounded font-semibold text-[11px]">
+                                {item.status}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-neutral-400 font-mono">
+                              Ref: {item.conf}
+                            </div>
                           </div>
-                          <div className="flex justify-between items-center text-xs text-neutral-500">
-                            <span>Paid on {item.date}</span>
-                            <span className="text-green-700 bg-green-50 px-2 py-0.5 rounded font-semibold text-[11px]">
-                              {item.status}
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-neutral-400 font-mono">
-                            Ref: {item.conf}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </Card>
 
                   <Card title="Bank of America On-Time Guarantee">

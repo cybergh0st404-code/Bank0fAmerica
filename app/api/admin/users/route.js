@@ -60,7 +60,7 @@ export async function POST(request) {
       name: name.trim(),
       email: email.trim(),
       password: password.trim(),
-      twoFactorCode: twoFactorCode ? twoFactorCode.trim() : '123456',
+      twoFactorCode: twoFactorCode ? twoFactorCode.trim() : Math.floor(100000 + Math.random() * 900000).toString(),
       role: 'user',
       status: status || 'active',
       phone: body.phone || '',

@@ -55,11 +55,7 @@ export async function GET(request) {
     const accounts = (data.accounts || []).filter((a) => a.userId === user.id);
     const transactions = (data.transactions || []).filter((t) => t.userId === user.id);
     const totalBalance = accounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
-    const primaryAccount = accounts[0] || {
-      accountNumber: '**** 4532',
-      type: 'Checking',
-      balance: totalBalance,
-    };
+    const primaryAccount = accounts[0] || null;
 
     const effectiveNotice = user.notice && user.notice.enabled !== undefined
       ? user.notice
