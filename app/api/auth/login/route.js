@@ -1,4 +1,4 @@
-import { findUserByEmail } from '../../../../lib/db';
+import { findUserByEmail } from '../../../../lib/db.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -65,7 +65,7 @@ export async function POST(request) {
 
       return new Response(JSON.stringify({ user: sessionUser }), {
         status: 200,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store, max-age=0, must-revalidate',
         },

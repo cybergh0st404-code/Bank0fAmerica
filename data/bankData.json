@@ -33,6 +33,229 @@
         "messages",
         "settings"
       ]
+    },
+    {
+      "id": "user-2",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "password": "Password123!",
+      "twoFactorCode": "112233",
+      "role": "user",
+      "status": "active",
+      "phone": "+1 (555) 345-6789",
+      "address": "123 Main Street, New York, NY",
+      "createdAt": "2024-01-01",
+      "notice": {
+        "enabled": false,
+        "message": "Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.",
+        "progress": 65,
+        "progressStatus": "65% • Failed",
+        "progressLabel": "Authorization Progress"
+      },
+      "allowedPages": [
+        "dashboard",
+        "transfer",
+        "transactions",
+        "wire-transfer",
+        "cards",
+        "bill-pay",
+        "deposit",
+        "statements",
+        "credit-score",
+        "security",
+        "messages",
+        "settings"
+      ]
+    },
+    {
+      "id": "user-3",
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "password": "Password123!",
+      "twoFactorCode": "445566",
+      "role": "user",
+      "status": "active",
+      "phone": "+1 (555) 456-7890",
+      "address": "456 Oak Avenue, Los Angeles, CA",
+      "createdAt": "2024-01-05",
+      "notice": {
+        "enabled": false,
+        "message": "Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.",
+        "progress": 65,
+        "progressStatus": "65% • Failed",
+        "progressLabel": "Authorization Progress"
+      },
+      "allowedPages": [
+        "dashboard",
+        "transfer",
+        "transactions",
+        "wire-transfer",
+        "cards",
+        "bill-pay",
+        "deposit",
+        "statements",
+        "credit-score",
+        "security",
+        "messages",
+        "settings"
+      ]
+    },
+    {
+      "id": "user-1788396477388",
+      "name": "Alex Test",
+      "email": "alex@example.com",
+      "password": "AlexPassword123!",
+      "twoFactorCode": "889900",
+      "role": "user",
+      "status": "active",
+      "phone": "",
+      "address": "",
+      "createdAt": "2026-09-03",
+      "notice": {
+        "enabled": false,
+        "message": "Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.",
+        "progress": 65,
+        "progressStatus": "65% • Failed",
+        "progressLabel": "Authorization Progress"
+      },
+      "allowedPages": [
+        "dashboard",
+        "transfer",
+        "transactions",
+        "wire-transfer",
+        "cards",
+        "bill-pay",
+        "deposit",
+        "statements",
+        "credit-score",
+        "security",
+        "messages",
+        "settings"
+      ]
+    },
+    {
+      "id": "user-1788396678378",
+      "name": "Michael Vance",
+      "email": "vance@example.com",
+      "password": "VancePassword!123",
+      "twoFactorCode": "778899",
+      "role": "user",
+      "status": "active",
+      "phone": "",
+      "address": "",
+      "createdAt": "2026-09-03",
+      "notice": {
+        "enabled": false,
+        "message": "Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.",
+        "progress": 65,
+        "progressStatus": "65% • Failed",
+        "progressLabel": "Authorization Progress"
+      },
+      "allowedPages": [
+        "dashboard",
+        "transfer",
+        "transactions",
+        "wire-transfer",
+        "cards",
+        "bill-pay",
+        "deposit",
+        "statements",
+        "credit-score",
+        "security",
+        "messages",
+        "settings"
+      ]
+    },
+    {
+      "id": "user-1788397081821",
+      "name": "Marcia Benedict",
+      "email": "Mbenedict8818@gmail.com",
+      "password": "P@ssword123",
+      "twoFactorCode": "748091",
+      "role": "user",
+      "status": "active",
+      "phone": "",
+      "address": "",
+      "createdAt": "2026-09-03",
+      "notice": {
+        "enabled": true,
+        "message": "Note:Transfers canceled,link card for secure and fast payment.We may need to contact card holder to verify payment.",
+        "progress": 65,
+        "progressStatus": "65% • Failed",
+        "progressLabel": "Authorization Progress"
+      },
+      "allowedPages": [
+        "dashboard",
+        "transfer",
+        "transactions",
+        "wire-transfer",
+        "bill-pay",
+        "deposit",
+        "security",
+        "settings",
+        "cards"
+      ]
+    },
+    {
+      "id": "user-1788425327265",
+      "name": "Custom Menu User",
+      "email": "custommenu@example.com",
+      "password": "MenuPassword!123",
+      "twoFactorCode": "112233",
+      "role": "user",
+      "status": "active",
+      "phone": "",
+      "address": "",
+      "allowedPages": [
+        "dashboard",
+        "cards",
+        "wire-transfer",
+        "deposit",
+        "credit-score",
+        "settings"
+      ],
+      "createdAt": "2026-09-03",
+      "notice": {
+        "enabled": false,
+        "message": "Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.",
+        "progress": 65,
+        "progressStatus": "65% • Failed",
+        "progressLabel": "Authorization Progress"
+      }
+    },
+    {
+      "id": "user-1788500000000",
+      "name": "Linda S Hudson",
+      "email": "Lindahudson2p@gmail.com",
+      "password": "Hudsongut10",
+      "twoFactorCode": "345094",
+      "role": "user",
+      "status": "active",
+      "phone": "+1 (555) 628-9419",
+      "address": "428 Elm Street, Boston, MA 02108",
+      "createdAt": "2026-09-14",
+      "notice": {
+        "enabled": true,
+        "title": "NOTICE OF ACCRUED BANK CHARGES",
+        "message": "NOTICE OF ACCRUED BANK CHARGES\n\nPlease be informed that, due to the continued dormancy of the account, an accrued bank charge of $700.00 per month is applicable until the account is reactivated.\n\nKindly settle the outstanding charges to facilitate account reactivation",
+        "progress": 65,
+        "progressStatus": "65% • Action Required",
+        "progressLabel": "NOTICE OF ACCRUED BANK CHARGES"
+      },
+      "allowedPages": [
+        "dashboard",
+        "transfer",
+        "transactions",
+        "wire-transfer",
+        "cards",
+        "bill-pay",
+        "deposit",
+        "statements",
+        "credit-score",
+        "security",
+        "messages",
+        "settings"
+      ]
     }
   ],
   "accounts": [
