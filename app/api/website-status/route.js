@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { revalidatePath } from 'next/cache';
+import { requireAdmin } from '../../../lib/security.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -74,18 +75,26 @@ export async function GET() {
 }
 
 export async function PUT(request) {
-  const { isOpen } = await request.json();
-
-  if (typeof isOpen !== 'boolean') {
-    return new Response(JSON.stringify({ message: 'Invalid value for isOpen. Must be boolean.' }), {
-      status: 400,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  }
-
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { isOpen } = await request.json();
+
+    if (typeof isOpen !== 'boolean') {
+      return new Response(JSON.stringify({ message: 'Invalid value for isOpen. Must be boolean.' }), {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
     const newStatus = {
       isOpen,
       updatedAt: new Date().toISOString(),

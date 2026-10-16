@@ -1,10 +1,13 @@
 import { getBankData } from '../../../../lib/db.js';
+import { getSessionFromRequest } from '../../../../lib/security.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(request) {
   try {
+    const session = await getSessionFromRequest(request);
+
     let userCookie = null;
     try {
       const rawUser = request.cookies.get('user')?.value;
@@ -19,14 +22,7 @@ export async function GET(request) {
       userCookie = null;
     }
 
-    const { searchParams } = new URL(request.url);
-    const queryUserId = searchParams.get('userId');
-    const queryEmail = searchParams.get('email');
-
-    const effectiveId = userCookie?.id || queryUserId;
-    const effectiveEmail = userCookie?.email || queryEmail;
-
-    if (!effectiveId && !effectiveEmail) {
+    if (!session && !userCookie) {
       return new Response(JSON.stringify({ message: 'Unauthorized.' }), {
         status: 401,
         headers: { 
@@ -34,6 +30,26 @@ export async function GET(request) {
           'Cache-Control': 'no-store, max-age=0, must-revalidate',
         },
       });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const queryUserId = searchParams.get('userId');
+    const queryEmail = searchParams.get('email');
+
+    let effectiveId = null;
+    let effectiveEmail = null;
+
+    if (session) {
+      if (session.role === 'admin') {
+        effectiveId = queryUserId || session.id;
+        effectiveEmail = queryEmail || session.email;
+      } else {
+        effectiveId = session.id;
+        effectiveEmail = session.email;
+      }
+    } else if (userCookie) {
+      effectiveId = userCookie.id;
+      effectiveEmail = userCookie.email;
     }
 
     const data = await getBankData();

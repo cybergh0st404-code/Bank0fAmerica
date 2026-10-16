@@ -1055,20 +1055,11 @@ export default AdminUsersPage;
 
 export async function getServerSideProps(context) {
   const { req } = context;
-  const isAuth = req.cookies.isAuthenticated === 'true';
-  const rawUser = req.cookies.user;
-  let userRole = null;
-  if (rawUser) {
-    try {
-      userRole = JSON.parse(decodeURIComponent(rawUser))?.role;
-    } catch {
-      try {
-        userRole = JSON.parse(rawUser)?.role;
-      } catch (_) {}
-    }
-  }
+  const token = req.cookies?.session_token;
+  const { verifySessionToken } = await import('../../lib/security.js');
+  const session = token ? await verifySessionToken(token) : null;
 
-  if (!isAuth || userRole !== 'admin') {
+  if (!session || session.role !== 'admin') {
     return {
       notFound: true,
     };

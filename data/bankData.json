@@ -4,7 +4,7 @@
       "id": "user-1",
       "name": "Pattch P Jones",
       "email": "pattchjones@protonmail.com",
-      "password": "pattch123jones",
+      "password": "pbkdf2:100000:4da25305a8a78e13c7100914f504a1dc:ed8d9189a08a05a22b7214b82733ae18f059172d58026d4009f83332ef99440a",
       "twoFactorCode": "345094",
       "role": "user",
       "status": "active",

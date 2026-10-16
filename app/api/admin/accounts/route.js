@@ -1,10 +1,19 @@
 import { getBankData, saveBankData } from '../../../../lib/db.js';
+import { requireAdmin } from '../../../../lib/security.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const data = await getBankData();
     return new Response(JSON.stringify({ accounts: data.accounts || [] }), {
       status: 200,
@@ -25,6 +34,14 @@ export async function GET() {
 
 export async function PUT(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { id, balance, status, type, accountNumber } = body;
 

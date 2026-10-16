@@ -1,10 +1,19 @@
 import { getBankData, saveBankData } from '../../../../lib/db.js';
+import { requireAdmin } from '../../../../lib/security.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -33,6 +42,14 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { userId, type, description, amount, date, time, category, status, updateAccountBalance } = body;
 
@@ -95,6 +112,14 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { id, description, amount, type, date, time, category, status } = body;
 
@@ -152,6 +177,14 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

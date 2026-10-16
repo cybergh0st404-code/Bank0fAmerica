@@ -1,10 +1,19 @@
 import { getBankData, saveBankData, DEFAULT_ALLOWED_PAGES } from '../../../../lib/db.js';
+import { requireAdmin, hashPassword } from '../../../../lib/security.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const data = await getBankData();
     const usersWithAccounts = (data.users || []).map((user) => {
       const userAccounts = (data.accounts || []).filter((a) => a.userId === user.id);
@@ -35,6 +44,14 @@ export async function GET() {
 
 export async function POST(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { name, email, password, twoFactorCode, initialBalance, accountType, status } = body;
 
@@ -55,11 +72,13 @@ export async function POST(request) {
     }
 
     const userId = `user-${Date.now()}`;
+    const hashedPassword = await hashPassword(password.trim());
+
     const newUser = {
       id: userId,
       name: name.trim(),
       email: email.trim(),
-      password: password.trim(),
+      password: hashedPassword,
       twoFactorCode: twoFactorCode ? twoFactorCode.trim() : Math.floor(100000 + Math.random() * 900000).toString(),
       role: 'user',
       status: status || 'active',
@@ -122,6 +141,14 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { id, name, email, password, twoFactorCode, status, balance, phone, address } = body;
 
@@ -142,11 +169,16 @@ export async function PUT(request) {
     }
 
     const current = data.users[userIndex];
+    let newPassword = current.password;
+    if (password !== undefined && password !== '') {
+      newPassword = await hashPassword(password.trim());
+    }
+
     const updatedUser = {
       ...current,
       name: name !== undefined ? name.trim() : current.name,
       email: email !== undefined ? email.trim() : current.email,
-      password: password !== undefined && password !== '' ? password.trim() : current.password,
+      password: newPassword,
       twoFactorCode: twoFactorCode !== undefined && twoFactorCode !== '' ? twoFactorCode.trim() : current.twoFactorCode,
       status: status !== undefined ? status : current.status,
       phone: phone !== undefined ? phone : current.phone,
@@ -212,6 +244,14 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {

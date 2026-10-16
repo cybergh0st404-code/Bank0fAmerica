@@ -1,21 +1,14 @@
 import { NextResponse } from 'next/server';
+import { verifySessionToken } from './lib/security.js';
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
-  const isAuthenticated = request.cookies.get('isAuthenticated')?.value === 'true';
-  let userRole = null;
-  try {
-    const rawUser = request.cookies.get('user')?.value;
-    if (rawUser) {
-      try {
-        userRole = JSON.parse(decodeURIComponent(rawUser)).role;
-      } catch {
-        userRole = JSON.parse(rawUser).role;
-      }
-    }
-  } catch (_) {
-    userRole = null;
-  }
+
+  // Cryptographically verify session token (tamper-proof)
+  const sessionToken = request.cookies.get('session_token')?.value;
+  const session = sessionToken ? await verifySessionToken(sessionToken) : null;
+  const isAuthenticated = Boolean(session);
+  const userRole = session?.role || null;
 
   // The secret admin slug
   const secretSlug = process.env.ADMIN_SECRET_SLUG || 'adm_s3cret_lg0g4h2j3k4l5m6n';

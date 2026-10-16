@@ -65,11 +65,14 @@ export const AuthProvider = ({ children }) => {
     setCookie('user', JSON.stringify(userData), 7); // Set for 7 days
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
     setIsAuthenticated(false);
     setCookie('isAuthenticated', '', -1); // Expire cookie
     setCookie('user', '', -1); // Expire cookie
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (_) { }
   };
 
   return (
