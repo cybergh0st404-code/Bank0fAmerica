@@ -1,4 +1,4 @@
-import { getBankData, saveBankData } from '../../../../lib/db';
+import { getBankData, saveBankData } from '../../../../lib/db.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

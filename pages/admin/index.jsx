@@ -274,18 +274,19 @@ const AdminUsersPage = () => {
         }),
       });
       if (res.ok) {
-        setUsersList((prev) =>
+        setUsers((prev) =>
           prev.map((u) => (u.id === noticeUser.id ? { ...u, notice: { ...noticeForm } } : u))
         );
         alert(`Notice settings for ${noticeUser.name} updated successfully!`);
         setShowNoticeModal(false);
         fetchUsers();
       } else {
-        alert('Failed to save notice settings.');
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.message || 'Failed to save notice settings.');
       }
     } catch (err) {
       console.error(err);
-      alert('Error updating notice settings.');
+      alert('Error updating notice settings: ' + (err.message || ''));
     } finally {
       setActionLoading(false);
     }

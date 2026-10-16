@@ -1,4 +1,4 @@
-import { getBankData, saveBankData, DEFAULT_ALLOWED_PAGES } from '../../../../lib/db';
+import { getBankData, saveBankData, DEFAULT_ALLOWED_PAGES } from '../../../../lib/db.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -152,9 +152,8 @@ export async function PUT(request) {
       phone: phone !== undefined ? phone : current.phone,
       address: address !== undefined ? address : current.address,
     };
-    data.users[userIndex] = updatedUser;
 
-    // Update name in user's accounts
+    // Update name in user's accounts if name was changed
     if (name) {
       data.accounts = (data.accounts || []).map((acc) => {
         if (acc.userId === id) {
@@ -182,6 +181,8 @@ export async function PUT(request) {
     if (body.allowedPages !== undefined && Array.isArray(body.allowedPages)) {
       updatedUser.allowedPages = body.allowedPages;
     }
+
+    data.users[userIndex] = updatedUser;
 
     // If balance was provided, update primary account balance
     if (balance !== undefined && balance !== '') {
