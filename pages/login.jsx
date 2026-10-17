@@ -14,10 +14,9 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorTicket, setTwoFactorTicket] = useState('');
   const router = useRouter();
   const { login } = useAuth(); // Use the login function from AuthContext
-
-  
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,7 +27,12 @@ const Login = () => {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, twoFactorCode: show2FA ? twoFactorCode : undefined }),
+        body: JSON.stringify({
+          email,
+          password,
+          twoFactorCode: show2FA ? twoFactorCode : undefined,
+          twoFactorTicket: show2FA ? twoFactorTicket : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -38,6 +42,9 @@ const Login = () => {
       }
       if (data.require2fa) {
         setShow2FA(true);
+        if (data.twoFactorTicket) {
+          setTwoFactorTicket(data.twoFactorTicket);
+        }
         setError('');
         setLoading(false);
         return;
@@ -169,6 +176,7 @@ const Login = () => {
                   onClick={() => {
                     setShow2FA(false);
                     setTwoFactorCode('');
+                    setTwoFactorTicket('');
                     setError('');
                   }}
                   className="w-full text-sm text-primary-blue hover:underline"

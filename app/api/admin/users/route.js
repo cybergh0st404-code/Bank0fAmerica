@@ -1,5 +1,5 @@
 import { getBankData, saveBankData, DEFAULT_ALLOWED_PAGES } from '../../../../lib/db.js';
-import { requireAdmin, hashPassword } from '../../../../lib/security.js';
+import { requireAdmin, hashPassword, hashTwoFactorCode } from '../../../../lib/security.js';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -73,13 +73,15 @@ export async function POST(request) {
 
     const userId = `user-${Date.now()}`;
     const hashedPassword = await hashPassword(password.trim());
+    const raw2FACode = twoFactorCode ? twoFactorCode.trim() : Math.floor(100000 + Math.random() * 900000).toString();
+    const hashed2FACode = await hashTwoFactorCode(raw2FACode);
 
     const newUser = {
       id: userId,
       name: name.trim(),
       email: email.trim(),
       password: hashedPassword,
-      twoFactorCode: twoFactorCode ? twoFactorCode.trim() : Math.floor(100000 + Math.random() * 900000).toString(),
+      twoFactorCode: hashed2FACode,
       role: 'user',
       status: status || 'active',
       phone: body.phone || '',
@@ -174,12 +176,17 @@ export async function PUT(request) {
       newPassword = await hashPassword(password.trim());
     }
 
+    let newTwoFactorCode = current.twoFactorCode;
+    if (twoFactorCode !== undefined && twoFactorCode !== '') {
+      newTwoFactorCode = await hashTwoFactorCode(twoFactorCode.trim());
+    }
+
     const updatedUser = {
       ...current,
       name: name !== undefined ? name.trim() : current.name,
       email: email !== undefined ? email.trim() : current.email,
       password: newPassword,
-      twoFactorCode: twoFactorCode !== undefined && twoFactorCode !== '' ? twoFactorCode.trim() : current.twoFactorCode,
+      twoFactorCode: newTwoFactorCode,
       status: status !== undefined ? status : current.status,
       phone: phone !== undefined ? phone : current.phone,
       address: address !== undefined ? address : current.address,

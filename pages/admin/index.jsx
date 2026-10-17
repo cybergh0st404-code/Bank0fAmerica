@@ -475,13 +475,13 @@ const AdminUsersPage = () => {
                               <td className="py-3 px-4 text-neutral-700">{u.email}</td>
                               <td className="py-3 px-4 font-mono text-neutral-600">
                                 <span className="bg-neutral-100 px-2 py-1 rounded text-xs">
-                                  {u.password || '••••••••'}
+                                  ••••••••
                                 </span>
                               </td>
                               <td className="py-3 px-4">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-blue-50 text-primary-blue border border-blue-200">
                                   <Key className="w-3 h-3 mr-1" />
-                                  {u.twoFactorCode || '123456'}
+                                  {u.twoFactorCode ? (u.twoFactorCode.startsWith('pbkdf2:') ? '••••••' : u.twoFactorCode) : 'Enabled'}
                                 </span>
                               </td>
                               <td className="py-3 px-4 font-semibold text-neutral-900">
@@ -572,10 +572,10 @@ const AdminUsersPage = () => {
                               <span className="text-neutral-500">Password / 2FA:</span>
                               <div className="flex items-center space-x-1.5">
                                 <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-neutral-200 text-[11px]">
-                                  {u.password || '••••••••'}
+                                  ••••••••
                                 </span>
                                 <span className="font-mono font-bold bg-blue-50 text-primary-blue px-1.5 py-0.5 rounded border border-blue-200 text-[11px]">
-                                  {u.twoFactorCode || '123456'}
+                                  {u.twoFactorCode ? (u.twoFactorCode.startsWith('pbkdf2:') ? '••••••' : u.twoFactorCode) : 'Enabled'}
                                 </span>
                               </div>
                             </div>
@@ -684,7 +684,7 @@ const AdminUsersPage = () => {
                         type="text"
                         required
                         maxLength={6}
-                        placeholder="e.g. 345094"
+                        placeholder="6-digit security code"
                         value={newUser.twoFactorCode}
                         onChange={(e) => setNewUser({ ...newUser, twoFactorCode: e.target.value.replace(/\D/g, '') })}
                       />

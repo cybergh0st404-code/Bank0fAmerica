@@ -1,5 +1,19 @@
 import { findUserByEmail, getBankData, saveBankData } from '../../../../lib/db.js';
-import { verifyPassword, hashPassword, isPasswordHashed, createSessionToken } from '../../../../lib/security.js';
+import {
+  verifyPassword,
+  hashPassword,
+  isPasswordHashed,
+  createSessionToken,
+  checkRateLimit,
+  recordFailedAttempt,
+  clearRateLimit,
+  getClientIp,
+  verifyTwoFactorCode,
+  hashTwoFactorCode,
+  getAdminSecretSlug,
+  createTwoFactorChallenge,
+  verifyTwoFactorChallenge,
+} from '../../../../lib/security.js';
 
 import fs from 'fs';
 import path from 'path';
@@ -34,11 +48,9 @@ export const revalidate = 0;
 
 export async function POST(request) {
   try {
-    const { email, password, twoFactorCode, adminSlug } = await request.json();
-    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || getEnvVar('ADMIN_EMAIL');
-    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || getEnvVar('ADMIN_PASSWORD');
-    const configuredSlug = process.env.ADMIN_SECRET_SLUG || process.env.NEXT_PUBLIC_ADMIN_SECRET_SLUG || getEnvVar('ADMIN_SECRET_SLUG', 'adm_s3cret_lg0g4h2j3k4l5m6n');
-    const isProd = process.env.NODE_ENV === 'production';
+    const clientIp = getClientIp(request);
+    const body = await request.json();
+    const { email, password, twoFactorCode, adminSlug, twoFactorTicket } = body;
 
     if (typeof email !== 'string' || typeof password !== 'string') {
       return new Response(JSON.stringify({ message: 'Invalid payload.' }), {
@@ -47,15 +59,68 @@ export async function POST(request) {
       });
     }
 
-    // Check if attempting to log in with environment admin credentials
-    if (ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // -------------------------------------------------------------------------
+    // Rate Limiting Checks (5 attempts per 15 minutes window)
+    // -------------------------------------------------------------------------
+    const ipRate = checkRateLimit(`ip:${clientIp}`, 5, 15 * 60 * 1000);
+    if (!ipRate.allowed) {
+      return new Response(
+        JSON.stringify({
+          message: `Too many failed attempts from your network. Please try again in ${Math.ceil(ipRate.retryAfterSeconds / 60)} minute(s).`,
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(ipRate.retryAfterSeconds),
+          },
+        }
+      );
+    }
+
+    if (normalizedEmail) {
+      const accountRate = checkRateLimit(`account:${normalizedEmail}`, 5, 15 * 60 * 1000);
+      if (!accountRate.allowed) {
+        return new Response(
+          JSON.stringify({
+            message: `Account is temporarily locked due to repeated failed attempts. Please try again in ${Math.ceil(accountRate.retryAfterSeconds / 60)} minute(s).`,
+          }),
+          {
+            status: 429,
+            headers: {
+              'Content-Type': 'application/json',
+              'Retry-After': String(accountRate.retryAfterSeconds),
+            },
+          }
+        );
+      }
+    }
+
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || getEnvVar('ADMIN_EMAIL');
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || getEnvVar('ADMIN_PASSWORD');
+    // Admin slug must be explicitly configured in environment; no hardcoded fallback
+    const configuredSlug = getAdminSecretSlug() || getEnvVar('ADMIN_SECRET_SLUG') || null;
+    const isProd = process.env.NODE_ENV === 'production';
+
+    // -------------------------------------------------------------------------
+    // Environment Admin Credentials Flow
+    // -------------------------------------------------------------------------
+    if (ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
       const isPassValid = await verifyPassword(password, ADMIN_PASSWORD);
-      if (!adminSlug || adminSlug !== configuredSlug || !isPassValid) {
+      if (!configuredSlug || !adminSlug || adminSlug !== configuredSlug || !isPassValid) {
+        recordFailedAttempt(`ip:${clientIp}`);
+        recordFailedAttempt(`account:${normalizedEmail}`);
         return new Response(JSON.stringify({ message: 'Invalid credentials.' }), {
           status: 401,
           headers: { 'Content-Type': 'application/json' },
         });
       }
+
+      // Successful login clears rate limits
+      clearRateLimit(`ip:${clientIp}`);
+      clearRateLimit(`account:${normalizedEmail}`);
 
       const user = { id: 'admin-1', name: 'Administrator', email: ADMIN_EMAIL, role: 'admin' };
       const sessionToken = await createSessionToken(user);
@@ -71,12 +136,16 @@ export async function POST(request) {
       });
     }
 
-    // Check dynamic user database
+    // -------------------------------------------------------------------------
+    // Dynamic Database User Flow
+    // -------------------------------------------------------------------------
     const dbUser = await findUserByEmail(email);
 
     if (dbUser) {
       const isPassValid = await verifyPassword(password, dbUser.password);
       if (!isPassValid) {
+        recordFailedAttempt(`ip:${clientIp}`);
+        recordFailedAttempt(`account:${normalizedEmail}`);
         return new Response(JSON.stringify({ message: 'Invalid credentials.' }), {
           status: 401,
           headers: { 'Content-Type': 'application/json' },
@@ -99,7 +168,9 @@ export async function POST(request) {
 
       // If user has admin role in database, also strictly require the secret admin slug
       if (dbUser.role === 'admin') {
-        if (!adminSlug || adminSlug !== configuredSlug) {
+        if (!configuredSlug || !adminSlug || adminSlug !== configuredSlug) {
+          recordFailedAttempt(`ip:${clientIp}`);
+          recordFailedAttempt(`account:${normalizedEmail}`);
           return new Response(JSON.stringify({ message: 'Invalid credentials.' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' },
@@ -114,30 +185,68 @@ export async function POST(request) {
         });
       }
 
-      // If user has a 2FA code configured and none was provided yet in this request
-      if (dbUser.twoFactorCode && !twoFactorCode) {
-        return new Response(JSON.stringify({ require2fa: true }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      // If 2FA is required, verify exact match or backup codes
+      // -----------------------------------------------------------------------
+      // Two-Factor Authentication Step
+      // -----------------------------------------------------------------------
       if (dbUser.twoFactorCode) {
-        const expectedCode = String(dbUser.twoFactorCode || '').trim();
-        const inputCode = String(twoFactorCode || '').trim();
-        const isCodeValid =
-          inputCode === expectedCode ||
-          inputCode === '345094' ||
-          inputCode === '123456';
+        // Step 1: User hasn't supplied 2FA code yet -> Issue short-lived challenge
+        if (!twoFactorCode) {
+          const challengeTicket = await createTwoFactorChallenge(dbUser.id, dbUser.email, dbUser.twoFactorCode);
+          return new Response(
+            JSON.stringify({
+              require2fa: true,
+              twoFactorTicket: challengeTicket,
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+
+        // Step 2: Validate 2FA code (strictly without static bypass codes)
+        let isCodeValid = false;
+
+        // Verify against challenge ticket if provided
+        if (twoFactorTicket) {
+          const ticketRes = await verifyTwoFactorChallenge(twoFactorTicket, twoFactorCode);
+          if (ticketRes.valid && ticketRes.payload?.userId === dbUser.id) {
+            isCodeValid = true;
+          }
+        }
+
+        // Direct verification against user's stored 2FA code (hashed or legacy plaintext)
+        if (!isCodeValid) {
+          isCodeValid = await verifyTwoFactorCode(twoFactorCode, dbUser.twoFactorCode);
+        }
 
         if (!isCodeValid) {
+          recordFailedAttempt(`ip:${clientIp}`);
+          recordFailedAttempt(`account:${normalizedEmail}`);
           return new Response(JSON.stringify({ message: 'Invalid two-factor code.' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' },
           });
         }
+
+        // Transparently upgrade legacy plaintext 2FA code in DB to PBKDF2 hash
+        if (!isPasswordHashed(dbUser.twoFactorCode)) {
+          try {
+            const data = await getBankData();
+            const uIdx = (data.users || []).findIndex((u) => u.id === dbUser.id);
+            if (uIdx !== -1) {
+              data.users[uIdx].twoFactorCode = await hashTwoFactorCode(twoFactorCode);
+              await saveBankData(data);
+            }
+          } catch (upgradeErr) {
+            console.error('Error upgrading 2FA code hash:', upgradeErr);
+          }
+        }
       }
+
+      // Successful login clears rate limits
+      clearRateLimit(`ip:${clientIp}`);
+      clearRateLimit(`account:${normalizedEmail}`);
 
       const sessionUser = {
         id: dbUser.id,
@@ -165,6 +274,12 @@ export async function POST(request) {
           'Set-Cookie': cookieHeader,
         },
       });
+    }
+
+    // Target user not found: record failed attempt
+    recordFailedAttempt(`ip:${clientIp}`);
+    if (normalizedEmail) {
+      recordFailedAttempt(`account:${normalizedEmail}`);
     }
 
     return new Response(JSON.stringify({ message: 'Invalid credentials.' }), {

@@ -7,9 +7,10 @@ import { useAuth } from '../../../utils/AuthContext';
 
 export async function getServerSideProps(context) {
   const { slug } = context.params;
-  const configuredSlug = process.env.ADMIN_SECRET_SLUG || process.env.NEXT_PUBLIC_ADMIN_SECRET_SLUG || 'adm_s3cret_lg0g4h2j3k4l5m6n';
+  const { getAdminSecretSlug } = await import('../../../lib/security.js');
+  const configuredSlug = getAdminSecretSlug();
 
-  if (!slug || slug !== configuredSlug) {
+  if (!configuredSlug || !slug || slug !== configuredSlug) {
     return {
       notFound: true,
     };

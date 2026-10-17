@@ -25,6 +25,9 @@ ngrok.zip
 # Website status
 websiteStatus.json
 
-# SQLite database files
+# SQLite & Local database files
 *.db
 *.db-journal
+data/*.json
+data/*.db
+data/

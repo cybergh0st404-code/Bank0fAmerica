@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifySessionToken } from './lib/security.js';
+import { verifySessionToken, getAdminSecretSlug } from './lib/security.js';
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
@@ -10,9 +10,9 @@ export async function middleware(request) {
   const isAuthenticated = Boolean(session);
   const userRole = session?.role || null;
 
-  // The secret admin slug
-  const secretSlug = process.env.ADMIN_SECRET_SLUG || 'adm_s3cret_lg0g4h2j3k4l5m6n';
-  const isAdminLogin = pathname === `/admin/${secretSlug}/login`;
+  // The secret admin slug (strictly from environment, no hardcoded fallbacks)
+  const secretSlug = getAdminSecretSlug();
+  const isAdminLogin = Boolean(secretSlug && pathname === `/admin/${secretSlug}/login`);
 
   // Explicitly block /admin/login and rewrite to 404
   if (pathname === '/admin/login') {
