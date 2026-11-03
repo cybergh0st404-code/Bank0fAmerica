@@ -8,8 +8,8 @@ export async function GET(request) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.authorized) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ message: auth.error || 'Unauthorized' }), {
+        status: auth.status || 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -46,8 +46,8 @@ export async function POST(request) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.authorized) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ message: auth.error || 'Unauthorized' }), {
+        status: auth.status || 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -87,6 +87,7 @@ export async function POST(request) {
       phone: body.phone || '',
       address: body.address || '',
       allowedPages: Array.isArray(body.allowedPages) && body.allowedPages.length > 0 ? body.allowedPages : DEFAULT_ALLOWED_PAGES,
+      tokenVersion: 1,
       createdAt: new Date().toISOString().split('T')[0],
     };
 
@@ -145,8 +146,8 @@ export async function PUT(request) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.authorized) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ message: auth.error || 'Unauthorized' }), {
+        status: auth.status || 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -181,6 +182,11 @@ export async function PUT(request) {
       newTwoFactorCode = await hashTwoFactorCode(twoFactorCode.trim());
     }
 
+    let tokenVersion = Number(current.tokenVersion) || 1;
+    if ((password !== undefined && password !== '') || status === 'flagged') {
+      tokenVersion += 1;
+    }
+
     const updatedUser = {
       ...current,
       name: name !== undefined ? name.trim() : current.name,
@@ -190,6 +196,7 @@ export async function PUT(request) {
       status: status !== undefined ? status : current.status,
       phone: phone !== undefined ? phone : current.phone,
       address: address !== undefined ? address : current.address,
+      tokenVersion,
     };
 
     // Update name in user's accounts if name was changed
@@ -253,8 +260,8 @@ export async function DELETE(request) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.authorized) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ message: auth.error || 'Unauthorized' }), {
+        status: auth.status || 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }

@@ -19,7 +19,10 @@ import {
   Edit2, 
   Trash2, 
   X,
-  DollarSign
+  DollarSign,
+  Eye,
+  EyeOff,
+  TrendingUp
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
@@ -37,6 +40,8 @@ const AdminTransactionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [websiteOpen, setWebsiteOpen] = useState(true);
+  const [showSpendingOverview, setShowSpendingOverview] = useState(true);
+  const [loadingSpendingToggle, setLoadingSpendingToggle] = useState(false);
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -110,6 +115,9 @@ const AdminTransactionsPage = () => {
         if (res.ok) {
           const data = await res.json();
           setWebsiteOpen(data.isOpen);
+          if (typeof data.showSpendingOverview === 'boolean') {
+            setShowSpendingOverview(data.showSpendingOverview);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -294,6 +302,46 @@ const AdminTransactionsPage = () => {
                     </Button>
                   </div>
                 </Card>
+
+              <Card className="p-2 px-4 shadow-sm border border-neutral-200">
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="w-4 h-4 text-primary-blue" />
+                    <span className="text-xs font-semibold text-neutral-700">Spending Overview:</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      showSpendingOverview ? 'bg-green-100 text-green-700' : 'bg-neutral-200 text-neutral-700'
+                    }`}>
+                      {showSpendingOverview ? 'Visible' : 'Hidden'}
+                    </span>
+                  </div>
+                  <Button
+                    variant={showSpendingOverview ? 'danger' : 'primary'}
+                    disabled={loadingSpendingToggle}
+                    onClick={async () => {
+                      const nextVal = !showSpendingOverview;
+                      setLoadingSpendingToggle(true);
+                      try {
+                        const res = await fetch('/api/website-status', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ showSpendingOverview: nextVal }),
+                        });
+                        if (res.ok) {
+                          setShowSpendingOverview(nextVal);
+                        }
+                      } catch (e) {
+                        console.error(e);
+                      } finally {
+                        setLoadingSpendingToggle(false);
+                      }
+                    }}
+                    className="px-3 py-1 text-xs"
+                  >
+                    {showSpendingOverview ? <EyeOff className="w-3.5 h-3.5 mr-1 inline" /> : <Eye className="w-3.5 h-3.5 mr-1 inline" />}
+                    {showSpendingOverview ? 'Hide' : 'Show'}
+                  </Button>
+                </div>
+              </Card>
               </div>
             </div>
 

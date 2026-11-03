@@ -1,7 +1,16 @@
+import { verifyRequestOrigin } from '../../../../lib/security.js';
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function POST() {
+export async function POST(request) {
+  const originCheck = verifyRequestOrigin(request);
+  if (!originCheck.valid) {
+    return new Response(JSON.stringify({ message: 'Forbidden: Invalid request origin.' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const isProd = process.env.NODE_ENV === 'production';
   const clearSessionCookie = `session_token=; Path=/; HttpOnly; Max-Age=0; ${isProd ? 'Secure;' : ''}`;
   const clearAuthCookie = `isAuthenticated=; Path=/; Max-Age=0; ${isProd ? 'Secure;' : ''}`;

@@ -28,6 +28,11 @@ const Settings = () => {
     newPassword: '',
     confirmPassword: '',
   });
+  const [passwordStatus, setPasswordStatus] = useState({
+    loading: false,
+    error: '',
+    success: '',
+  });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
@@ -49,18 +54,50 @@ const Settings = () => {
     alert('Profile updated successfully!');
   };
 
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = async (e) => {
     e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('New passwords do not match!');
+    setPasswordStatus({ loading: true, error: '', success: '' });
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordStatus({ loading: false, error: 'New password must be at least 6 characters long.', success: '' });
       return;
     }
-    alert('Password changed successfully!');
-    setPasswordData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    });
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordStatus({ loading: false, error: 'New passwords do not match!', success: '' });
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+          confirmPassword: passwordData.confirmPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setPasswordStatus({ loading: false, error: data.message || 'Failed to update password.', success: '' });
+        return;
+      }
+
+      setPasswordStatus({
+        loading: false,
+        error: '',
+        success: 'Password updated successfully! All other active sessions across your devices have been revoked.',
+      });
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (err) {
+      setPasswordStatus({ loading: false, error: 'Network error. Please try again.', success: '' });
+    }
   };
 
   const tabs = [
@@ -225,9 +262,19 @@ const Settings = () => {
                       }
                       required
                     />
+                    {passwordStatus.error && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-bank text-red-700 text-sm">
+                        {passwordStatus.error}
+                      </div>
+                    )}
+                    {passwordStatus.success && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-bank text-green-800 text-sm">
+                        ✓ {passwordStatus.success}
+                      </div>
+                    )}
                     <div className="flex justify-end space-x-4 pt-4 border-t border-neutral-200">
-                      <Button type="submit" variant="primary">
-                        Update Password
+                      <Button type="submit" variant="primary" disabled={passwordStatus.loading}>
+                        {passwordStatus.loading ? 'Updating Password...' : 'Update Password'}
                       </Button>
                     </div>
                   </form>

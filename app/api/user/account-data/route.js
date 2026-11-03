@@ -1,5 +1,7 @@
 import { getBankData } from '../../../../lib/db.js';
 import { getSessionFromRequest } from '../../../../lib/security.js';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -8,21 +10,7 @@ export async function GET(request) {
   try {
     const session = await getSessionFromRequest(request);
 
-    let userCookie = null;
-    try {
-      const rawUser = request.cookies.get('user')?.value;
-      if (rawUser) {
-        try {
-          userCookie = JSON.parse(decodeURIComponent(rawUser));
-        } catch {
-          userCookie = JSON.parse(rawUser);
-        }
-      }
-    } catch (_) {
-      userCookie = null;
-    }
-
-    if (!session && !userCookie) {
+    if (!session) {
       return new Response(JSON.stringify({ message: 'Unauthorized.' }), {
         status: 401,
         headers: { 
@@ -39,17 +27,12 @@ export async function GET(request) {
     let effectiveId = null;
     let effectiveEmail = null;
 
-    if (session) {
-      if (session.role === 'admin') {
-        effectiveId = queryUserId || session.id;
-        effectiveEmail = queryEmail || session.email;
-      } else {
-        effectiveId = session.id;
-        effectiveEmail = session.email;
-      }
-    } else if (userCookie) {
-      effectiveId = userCookie.id;
-      effectiveEmail = userCookie.email;
+    if (session.role === 'admin') {
+      effectiveId = queryUserId || session.id;
+      effectiveEmail = queryEmail || session.email;
+    } else {
+      effectiveId = session.id;
+      effectiveEmail = session.email;
     }
 
     const data = await getBankData();
@@ -68,20 +51,59 @@ export async function GET(request) {
       });
     }
 
+    // Active session revocation check for non-admin accounts
+    if (session.role !== 'admin') {
+      if (user.status === 'flagged') {
+        return new Response(JSON.stringify({ message: 'Account restricted. Please contact customer service.' }), {
+          status: 403,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store, max-age=0, must-revalidate',
+          },
+        });
+      }
+
+      const dbVersion = Number(user.tokenVersion) || 1;
+      const sessionVersion = Number(session.tokenVersion) || 1;
+      if (sessionVersion < dbVersion) {
+        return new Response(JSON.stringify({ message: 'Session revoked. Please log in again.' }), {
+          status: 401,
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store, max-age=0, must-revalidate',
+          },
+        });
+      }
+    }
+
     const accounts = (data.accounts || []).filter((a) => a.userId === user.id);
     const transactions = (data.transactions || []).filter((t) => t.userId === user.id);
     const totalBalance = accounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
     const primaryAccount = accounts[0] || null;
 
+    let showSpendingOverview = true;
+    try {
+      const statusFile = path.join(process.cwd(), 'websiteStatus.json');
+      const raw = await fs.readFile(statusFile, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (typeof parsed.showSpendingOverview === 'boolean') {
+        showSpendingOverview = parsed.showSpendingOverview;
+      }
+    } catch (_) {
+      if (globalThis.__WEBSITE_STATUS__ && typeof globalThis.__WEBSITE_STATUS__.showSpendingOverview === 'boolean') {
+        showSpendingOverview = globalThis.__WEBSITE_STATUS__.showSpendingOverview;
+      }
+    }
+
     const effectiveNotice = user.notice && user.notice.enabled !== undefined
       ? user.notice
-      : (userCookie && userCookie.notice ? userCookie.notice : {
+      : {
           enabled: false,
           message: 'Notice: Please note that full and complete payment is required before access and authorization to your online account and credit card can be granted. Kindly ensure all outstanding balances are settled to avoid delays.',
           progress: 65,
           progressStatus: '65% • Failed',
           progressLabel: 'Authorization Progress'
-        });
+        };
 
     return new Response(
       JSON.stringify({
@@ -101,6 +123,7 @@ export async function GET(request) {
         totalBalance,
         transactions,
         notice: effectiveNotice,
+        showSpendingOverview,
       }),
       {
         status: 200,

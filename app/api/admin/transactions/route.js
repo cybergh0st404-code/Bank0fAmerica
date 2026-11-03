@@ -8,8 +8,8 @@ export async function GET(request) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.authorized) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ message: auth.error || 'Unauthorized' }), {
+        status: auth.status || 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -44,8 +44,8 @@ export async function POST(request) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.authorized) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ message: auth.error || 'Unauthorized' }), {
+        status: auth.status || 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -114,8 +114,8 @@ export async function PUT(request) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.authorized) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ message: auth.error || 'Unauthorized' }), {
+        status: auth.status || 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -179,8 +179,8 @@ export async function DELETE(request) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.authorized) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-        status: 401,
+      return new Response(JSON.stringify({ message: auth.error || 'Unauthorized' }), {
+        status: auth.status || 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }

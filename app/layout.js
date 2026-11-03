@@ -5,7 +5,7 @@ import { AuthProvider } from '../utils/AuthContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'BankOfAmerica - Professional Online Banking System',
+  title: 'UBS - Professional Online Banking System',
   description: 'Your secure and reliable online banking solution.',
 };
 

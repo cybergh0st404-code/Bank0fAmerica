@@ -13,6 +13,7 @@ import {
   getAdminSecretSlug,
   createTwoFactorChallenge,
   verifyTwoFactorChallenge,
+  verifyRequestOrigin,
 } from '../../../../lib/security.js';
 
 import fs from 'fs';
@@ -48,6 +49,14 @@ export const revalidate = 0;
 
 export async function POST(request) {
   try {
+    const originCheck = verifyRequestOrigin(request);
+    if (!originCheck.valid) {
+      return new Response(JSON.stringify({ message: 'Forbidden: Invalid request origin.' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const clientIp = getClientIp(request);
     const body = await request.json();
     const { email, password, twoFactorCode, adminSlug, twoFactorTicket } = body;
@@ -262,6 +271,7 @@ export async function POST(request) {
         name: sessionUser.name,
         email: sessionUser.email,
         role: sessionUser.role,
+        tokenVersion: Number(dbUser.tokenVersion) || 1,
       });
 
       const cookieHeader = `session_token=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}; ${isProd ? 'Secure;' : ''}`;

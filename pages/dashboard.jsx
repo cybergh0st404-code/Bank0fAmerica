@@ -12,10 +12,10 @@ import {
   TrendingDown,
   AlertCircle,
 } from 'lucide-react';
-import Navbar from '../components/Navbar'; // Adjust path after component migration
-import Sidebar from '../components/Sidebar'; // Adjust path after component migration
-import Card from '../components/Card'; // Adjust path after component migration
-import Button from '../components/Button'; // Adjust path after component migration
+import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
+import Card from '../components/Card';
+import Button from '../components/Button';
 import AccountNoticeCard from '../components/AccountNoticeCard';
 import { useAuth } from '../utils/AuthContext';
 
@@ -26,6 +26,7 @@ const Dashboard = () => {
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [notice, setNotice] = useState(null);
   const [showNoticePopup, setShowNoticePopup] = useState(false);
+  const [showSpendingOverview, setShowSpendingOverview] = useState(true);
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
 
@@ -56,6 +57,9 @@ const Dashboard = () => {
           }
           if (data.transactions) {
             setRecentTransactions(data.transactions);
+          }
+          if (typeof data.showSpendingOverview === 'boolean') {
+            setShowSpendingOverview(data.showSpendingOverview);
           }
           if (data.notice && data.notice.enabled) {
             setNotice(data.notice);
@@ -197,51 +201,54 @@ const Dashboard = () => {
                 </Card>
 
                 {/* Analytics and Recent Transactions */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className={`grid grid-cols-1 ${showSpendingOverview ? 'lg:grid-cols-2' : ''} gap-6`}>
                   {/* Spending Analytics */}
-                  <Card title="Spending Overview" subtitle="Last 30 days">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-green-50 rounded-bank">
-                        <div className="flex items-center space-x-3">
-                          <TrendingUp className="w-5 h-5 text-green-600" />
-                          <div>
-                            <p className="text-sm text-neutral-600">Income</p>
-                            <p className="text-lg font-semibold text-green-600">$3,500.00</p>
+                  {showSpendingOverview && (
+                    <Card title="Spending Overview" subtitle="Last 30 days">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-green-50 rounded-bank">
+                          <div className="flex items-center space-x-3">
+                            <TrendingUp className="w-5 h-5 text-green-600" />
+                            <div>
+                              <p className="text-sm text-neutral-600">Income</p>
+                              <p className="text-lg font-semibold text-green-600">$3,500.00</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-red-50 rounded-bank">
-                        <div className="flex items-center space-x-3">
-                          <TrendingDown className="w-5 h-5 text-accent-red" />
-                          <div>
-                            <p className="text-sm text-neutral-600">Expenses</p>
-                            <p className="text-lg font-semibold text-accent-red">$448.44</p>
+                        <div className="flex items-center justify-between p-4 bg-red-50 rounded-bank">
+                          <div className="flex items-center space-x-3">
+                            <TrendingDown className="w-5 h-5 text-accent-red" />
+                            <div>
+                              <p className="text-sm text-neutral-600">Expenses</p>
+                              <p className="text-lg font-semibold text-accent-red">$448.44</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="mt-4 pt-4 border-t border-neutral-200">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-neutral-600">Net Savings</span>
-                          <span className="text-xl font-bold text-primary-blue">+$3,051.56</span>
+                        <div className="mt-4 pt-4 border-t border-neutral-200">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-600">Net Savings</span>
+                            <span className="text-xl font-bold text-primary-blue">+$3,051.56</span>
+                          </div>
+                        </div>
+                        {/* Simple Chart Representation */}
+                        <div className="mt-6 h-32 bg-accent-soft rounded-bank p-4 flex items-end justify-between">
+                          {[40, 60, 45, 70, 55, 80, 65].map((height, i) => (
+                            <div
+                              key={i}
+                              className="bg-primary-blue rounded-t-bank flex-1 mx-1"
+                              style={{ height: `${height}%` }}
+                            />
+                          ))}
                         </div>
                       </div>
-                      {/* Simple Chart Representation */}
-                      <div className="mt-6 h-32 bg-accent-soft rounded-bank p-4 flex items-end justify-between">
-                        {[40, 60, 45, 70, 55, 80, 65].map((height, i) => (
-                          <div
-                            key={i}
-                            className="bg-primary-blue rounded-t-bank flex-1 mx-1"
-                            style={{ height: `${height}%` }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  )}
 
                   {/* Recent Transactions */}
                   <Card 
                     title="Recent Transactions" 
                     subtitle="Last 10 transactions"
+                    className={showSpendingOverview ? '' : 'w-full'}
                     headerAction={
                       <Link
                         href="/transactions"

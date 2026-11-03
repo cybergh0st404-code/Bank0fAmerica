@@ -15,8 +15,18 @@ const Login = () => {
   const [show2FA, setShow2FA] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [twoFactorTicket, setTwoFactorTicket] = useState('');
+  const [timeoutNotice, setTimeoutNotice] = useState(false);
   const router = useRouter();
   const { login } = useAuth(); // Use the login function from AuthContext
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('reason') === 'timeout') {
+        setTimeoutNotice(true);
+      }
+    }
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -75,8 +85,8 @@ const Login = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4 space-x-3">
             <img
-              src="/logo.png"
-              alt="Bank of America"
+              src="/ubslogo.png"
+              alt="UBS"
               className="h-12 w-auto flex-shrink-0 object-contain"
               style={{
                 mixBlendMode: 'multiply',
@@ -85,7 +95,7 @@ const Login = () => {
               }}
             />
             <div className="text-primary-navy font-bold text-2xl">
-              Bank of America
+              E-Banking
             </div>
           </div>
           <h1 className="text-2xl font-bold text-primary-navy mb-2">
@@ -98,6 +108,17 @@ const Login = () => {
 
         {/* Login Card */}
         <div className="card shadow-bank-lg">
+          {timeoutNotice && (
+            <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 rounded-bank flex items-start space-x-2.5 text-amber-800 text-sm animate-fade-in">
+              <Lock className="w-4 h-4 mt-0.5 text-amber-600 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-900">Session Expired</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  For your security, you were signed out due to inactivity. Please sign in to continue.
+                </p>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleLogin}>
             {!show2FA ? (
               <>
