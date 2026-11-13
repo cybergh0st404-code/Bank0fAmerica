@@ -19,10 +19,13 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { useAuth } from '../utils/AuthContext';
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 
 const StatementsPage = () => {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
+  const { isLocked } = usePageSecurity('statements');
 
   const [activeTab, setActiveTab] = useState('statements');
   const [selectedYear, setSelectedYear] = useState('2026');
@@ -112,7 +115,9 @@ const StatementsPage = () => {
               </div>
             </div>
 
-            {notice && notice.enabled ? (
+            {isLocked ? (
+              <LockedServiceNotice serviceName="Statements & Tax Documents" pageId="statements" />
+            ) : notice && notice.enabled ? (
               <AccountNoticeCard notice={notice} />
             ) : (
               <>

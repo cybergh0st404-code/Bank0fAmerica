@@ -18,10 +18,13 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { useAuth } from '../utils/AuthContext';
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 
 const CreditScorePage = () => {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
+  const { isLocked } = usePageSecurity('credit-score');
   const [notice, setNotice] = useState(null);
 
   useEffect(() => {
@@ -73,7 +76,9 @@ const CreditScorePage = () => {
               <p className="text-neutral-600 text-sm">Complimentary monthly credit score powered by Equifax® data.</p>
             </div>
 
-            {notice && notice.enabled ? (
+            {isLocked ? (
+              <LockedServiceNotice serviceName="FICO® Score & Credit Health" pageId="credit-score" />
+            ) : notice && notice.enabled ? (
               <AccountNoticeCard notice={notice} />
             ) : (
               <>

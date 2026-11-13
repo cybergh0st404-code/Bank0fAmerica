@@ -21,10 +21,13 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { useAuth } from '../utils/AuthContext';
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 
 const MessagesPage = () => {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
+  const { isLocked } = usePageSecurity('messages');
 
   const [activeFilter, setActiveFilter] = useState('all');
   const [selectedMessage, setSelectedMessage] = useState(null);
@@ -110,7 +113,9 @@ const MessagesPage = () => {
               <p className="text-neutral-600 text-sm">Official encrypted correspondence, compliance notices, and customer care alerts.</p>
             </div>
 
-            {notice && notice.enabled ? (
+            {isLocked ? (
+              <LockedServiceNotice serviceName="Secure Message Center" pageId="messages" />
+            ) : notice && notice.enabled ? (
               <AccountNoticeCard notice={notice} />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

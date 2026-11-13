@@ -20,10 +20,13 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 import { useAuth } from '../utils/AuthContext';
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 
 const DepositPage = () => {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
+  const { isLocked } = usePageSecurity('deposit');
 
   const [depositAmount, setDepositAmount] = useState('');
   const [frontCaptured, setFrontCaptured] = useState(false);
@@ -65,6 +68,10 @@ const DepositPage = () => {
 
   const handleDeposit = (e) => {
     e.preventDefault();
+    if (isLocked) {
+      alert('This service has been administratively locked on your account. Check deposit is disabled.');
+      return;
+    }
     if (!frontCaptured || !backCaptured) {
       alert('Please capture or upload photos of both the Front and Back of the check.');
       return;
@@ -93,7 +100,9 @@ const DepositPage = () => {
               <p className="text-neutral-600 text-sm">Deposit paper checks directly into your account using camera capture.</p>
             </div>
 
-            {notice && notice.enabled ? (
+            {isLocked ? (
+              <LockedServiceNotice serviceName="Mobile Check Deposit" pageId="deposit" />
+            ) : notice && notice.enabled ? (
               <AccountNoticeCard notice={notice} />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

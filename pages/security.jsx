@@ -20,10 +20,13 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { useAuth } from '../utils/AuthContext';
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 
 const SecurityPage = () => {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
+  const { isLocked } = usePageSecurity('security');
 
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(true);
@@ -83,7 +86,9 @@ const SecurityPage = () => {
               <p className="text-neutral-600 text-sm">Monitor login devices, multi-factor authentication, and account activity alerts.</p>
             </div>
 
-            {notice && notice.enabled ? (
+            {isLocked ? (
+              <LockedServiceNotice serviceName="Security Center & Active Sessions" pageId="security" />
+            ) : notice && notice.enabled ? (
               <AccountNoticeCard notice={notice} />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

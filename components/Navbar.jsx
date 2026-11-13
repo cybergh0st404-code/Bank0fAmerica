@@ -36,7 +36,7 @@ const Navbar = ({ user, onLogout }) => {
 
             <div className="flex-shrink-0 flex items-center space-x-2">
               <img
-                src="/ubslogo.png"
+                src="/logo.png"
                 alt="Bank of America"
                 className="h-7 sm:h-9 w-auto flex-shrink-0 object-contain"
                 style={{
@@ -49,7 +49,7 @@ const Navbar = ({ user, onLogout }) => {
                 }}
               />
               <div className="text-primary-navy font-bold text-sm sm:text-base md:text-xl tracking-tight">
-                E-Banking
+                Bank of America
               </div>
             </div>
           </div>

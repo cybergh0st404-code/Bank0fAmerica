@@ -16,15 +16,46 @@ import {
   Mail,
   X,
   LogOut,
+  Lock,
   User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
+import { hasAdminPermission } from '../lib/navigationConfig.js';
 
 const Sidebar = ({ isAdmin = false }) => {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [allowedPages, setAllowedPages] = useState(user?.allowedPages || null);
+  const [allowedPages, setAllowedPages] = useState(['dashboard']);
+  const [lockedPages, setLockedPages] = useState([]);
+
+  // Hydrate allowedPages and lockedPages on client mount to guarantee zero hydration mismatch
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedAllowed = localStorage.getItem('bank_allowed_pages');
+        if (cachedAllowed) {
+          const parsed = JSON.parse(cachedAllowed);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setAllowedPages(parsed);
+          }
+        }
+        const cachedLocked = localStorage.getItem('bank_locked_pages');
+        if (cachedLocked) {
+          const parsed = JSON.parse(cachedLocked);
+          if (Array.isArray(parsed)) {
+            setLockedPages(parsed);
+          }
+        }
+      } catch (_) {}
+    }
+    if (user?.allowedPages && Array.isArray(user.allowedPages) && user.allowedPages.length > 0) {
+      setAllowedPages(user.allowedPages);
+    }
+    if (user?.lockedPages && Array.isArray(user.lockedPages)) {
+      setLockedPages(user.lockedPages);
+    }
+  }, [user]);
 
   // Listen to mobile menu toggle event dispatched by Navbar
   useEffect(() => {
@@ -35,16 +66,32 @@ const Sidebar = ({ isAdmin = false }) => {
     }
   }, []);
 
-  // Sync allowed pages from account-data API
+  // Sync latest allowed pages & locked pages from account-data API
   useEffect(() => {
     if (isAdmin || !user) return;
+    let isMounted = true;
     const fetchPerms = async () => {
       try {
         const res = await fetch('/api/user/account-data');
-        if (res.ok) {
+        if (res.ok && isMounted) {
           const data = await res.json();
           if (data.allowedPages && Array.isArray(data.allowedPages)) {
             setAllowedPages(data.allowedPages);
+            try {
+              localStorage.setItem('bank_allowed_pages', JSON.stringify(data.allowedPages));
+            } catch (_) {}
+          }
+          if (data.lockedPages && Array.isArray(data.lockedPages)) {
+            setLockedPages(data.lockedPages);
+            try {
+              localStorage.setItem('bank_locked_pages', JSON.stringify(data.lockedPages));
+            } catch (_) {}
+          }
+          if (updateUser) {
+            updateUser({
+              allowedPages: data.allowedPages || [],
+              lockedPages: data.lockedPages || [],
+            });
           }
         }
       } catch (err) {
@@ -52,6 +99,9 @@ const Sidebar = ({ isAdmin = false }) => {
       }
     };
     fetchPerms();
+    return () => {
+      isMounted = false;
+    };
   }, [isAdmin, user]);
 
   const allUserMenuItems = [
@@ -69,16 +119,24 @@ const Sidebar = ({ isAdmin = false }) => {
     { id: 'settings', path: '/settings', icon: Settings, label: 'Settings' },
   ];
 
-  const adminMenuItems = [
-    { path: '/admin', icon: Users, label: 'User Management' },
-    { path: '/admin/accounts', icon: CreditCard, label: 'All Accounts' },
-    { path: '/admin/transactions', icon: History, label: 'All Transactions' },
+  const isSuperAdmin = user?.role === 'superadmin';
+  const adminBasePath = isSuperAdmin ? '/super-admin' : '/admin';
+  const rawAdminMenuItems = [
+    { path: adminBasePath, icon: Users, label: isSuperAdmin ? 'Users & Admins' : 'My Users' },
+    { path: `${adminBasePath}/accounts`, icon: CreditCard, label: isSuperAdmin ? 'All Accounts' : 'User Accounts', perm: 'canViewAccounts' },
+    { path: `${adminBasePath}/transactions`, icon: History, label: isSuperAdmin ? 'All Transactions' : 'User Transactions', perm: 'canViewTransactions' },
   ];
 
-  // Filter items by allowed pages if user is not admin
-  const userMenuItems = allowedPages && Array.isArray(allowedPages) && allowedPages.length > 0
-    ? allUserMenuItems.filter((item) => allowedPages.includes(item.id))
-    : allUserMenuItems;
+  const adminMenuItems = rawAdminMenuItems.filter(
+    (item) => !item.perm || hasAdminPermission(user, item.perm)
+  );
+
+  // Filter items strictly by allowed pages for client users - NEVER display deselected items
+  const userMenuItems = allUserMenuItems.filter((item) => {
+    if (item.id === 'dashboard') return true;
+    if (!allowedPages || !Array.isArray(allowedPages)) return false;
+    return allowedPages.includes(item.id);
+  });
 
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;
 
@@ -87,8 +145,9 @@ const Sidebar = ({ isAdmin = false }) => {
       {menuItems.map((item) => {
         const Icon = item.icon;
         const isActive = isAdmin
-          ? router.pathname.startsWith(item.path) || (item.path === '/admin' && router.pathname === '/admin')
+          ? router.pathname === item.path || (item.path !== adminBasePath && router.pathname.startsWith(item.path))
           : router.pathname === item.path;
+        const isLocked = !isAdmin && lockedPages.includes(item.id);
 
         return (
           <button
@@ -97,14 +156,37 @@ const Sidebar = ({ isAdmin = false }) => {
               router.push(item.path);
               setIsOpen(false);
             }}
-            className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-bank text-sm font-medium transition-colors ${
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-bank text-sm font-medium transition-colors ${
               isActive
                 ? 'bg-primary-blue text-white shadow-bank'
-                : 'text-neutral-700 hover:bg-neutral-100 hover:text-primary-navy'
+                : isLocked
+                  ? 'text-neutral-600 hover:bg-red-50/70 hover:text-red-700'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-primary-navy'
             }`}
           >
-            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-neutral-500'}`} />
-            <span className="truncate">{item.label}</span>
+            <div className="flex items-center space-x-3 min-w-0">
+              <Icon
+                className={`w-4 h-4 flex-shrink-0 ${
+                  isActive
+                    ? 'text-white'
+                    : isLocked
+                      ? 'text-accent-red'
+                      : 'text-neutral-500'
+                }`}
+              />
+              <span className="truncate">{item.label}</span>
+            </div>
+            {isLocked && (
+              <span
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-tight ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700'
+                }`}
+                title="This service is locked on your account"
+              >
+                <Lock className="w-2.5 h-2.5 mr-0.5" />
+                Locked
+              </span>
+            )}
           </button>
         );
       })}
@@ -157,7 +239,7 @@ const Sidebar = ({ isAdmin = false }) => {
               </div>
               <div className="overflow-hidden">
                 <div className="text-xs font-bold text-primary-navy truncate">{user.name || 'Account Holder'}</div>
-                <div className="text-[11px] text-neutral-500 truncate">{isAdmin ? 'Administrator' : user.email}</div>
+                <div className="text-[11px] text-neutral-500 truncate">{isAdmin ? (isSuperAdmin ? 'Super Administrator' : 'Administrator') : user.email}</div>
               </div>
             </div>
           )}

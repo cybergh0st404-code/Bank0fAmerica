@@ -25,10 +25,13 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { useAuth } from '../utils/AuthContext';
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 
 const CardsPage = () => {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
+  const { isLocked: isPageLocked } = usePageSecurity('cards');
 
   const [isLocked, setIsLocked] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -90,7 +93,9 @@ const CardsPage = () => {
               <p className="text-neutral-600 text-sm">Manage your physical cards, virtual security details, and spending limits.</p>
             </div>
 
-            {notice && notice.enabled ? (
+            {isPageLocked ? (
+              <LockedServiceNotice serviceName="Cards & Virtual Wallets" pageId="cards" />
+            ) : notice && notice.enabled ? (
               <AccountNoticeCard notice={notice} />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

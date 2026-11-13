@@ -9,10 +9,13 @@ import Card from '../components/Card'; // Adjust path after component migration
 import Button from '../components/Button'; // Adjust path after component migration
 import Input from '../components/Input'; // Adjust path after component migration
 import { useAuth } from '../utils/AuthContext';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 //import { isProjectExpired } from '../src/utils/expiryCheck';
 
 const Settings = () => {
    const { user, logout } = useAuth();
+   const { isLocked } = usePageSecurity('settings');
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -120,8 +123,12 @@ const Settings = () => {
               <p className="text-neutral-600">Manage your account settings and preferences</p>
             </div>
 
-            {/* Tabs */}
-            <div className="bg-white rounded-card shadow-bank p-1 flex space-x-1 mb-6">
+            {isLocked ? (
+              <LockedServiceNotice serviceName="Account Settings" pageId="settings" />
+            ) : (
+              <>
+                {/* Tabs */}
+                <div className="bg-white rounded-card shadow-bank p-1 flex space-x-1 mb-6">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -428,6 +435,8 @@ const Settings = () => {
                   </div>
                 </div>
               </Card>
+            )}
+              </>
             )}
           </div>
         </main>

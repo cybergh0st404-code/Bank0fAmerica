@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import { 
   Users, 
   CreditCard, 
@@ -14,7 +14,10 @@ import {
   DollarSign, 
   Edit3, 
   X,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff,
+  TrendingUp
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Sidebar from '../../components/Sidebar';
@@ -22,12 +25,17 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { useAuth } from '../../utils/AuthContext';
+import { DEFAULT_ADMIN_PERMISSIONS, hasAdminPermission } from '../../lib/navigationConfig.js';
 
 const AdminAccountsPage = () => {
   const router = useRouter();
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user, logout, updateUser, loading: authLoading } = useAuth();
   
+  const isSuperAdmin = user?.role === 'superadmin';
+  const isAnyAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
   const [accounts, setAccounts] = useState([]);
+  const [livePermissions, setLivePermissions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [websiteOpen, setWebsiteOpen] = useState(true);
@@ -38,13 +46,25 @@ const AdminAccountsPage = () => {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [newBalance, setNewBalance] = useState('');
+  const [accountStatus, setAccountStatus] = useState('active');
+  const [depositDate, setDepositDate] = useState('');
+  const [openingDate, setOpeningDate] = useState('');
   const [savingBalance, setSavingBalance] = useState(false);
 
+  const canDo = (permId) => {
+    if (isSuperAdmin) return true;
+    const effectiveUser = {
+      ...user,
+      adminPermissions: livePermissions || user?.adminPermissions || DEFAULT_ADMIN_PERMISSIONS,
+    };
+    return hasAdminPermission(effectiveUser, permId);
+  };
+
   useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
+    if (!authLoading && (!user || !isAnyAdmin)) {
       router.push('/404');
     }
-  }, [user, router, authLoading]);
+  }, [user, router, authLoading, isAnyAdmin]);
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -53,6 +73,17 @@ const AdminAccountsPage = () => {
       if (res.ok) {
         const data = await res.json();
         setAccounts(data.accounts || []);
+        if (data.adminContext?.permissions) {
+          setLivePermissions(data.adminContext.permissions);
+          if (updateUser) {
+            updateUser({ adminPermissions: data.adminContext.permissions });
+          }
+        }
+      } else if (res.status === 403) {
+        const err = await res.json().catch(() => ({}));
+        if (err.message?.toLowerCase().includes('permission')) {
+          router.push('/admin');
+        }
       }
     } catch (e) {
       console.error(e);
@@ -62,6 +93,7 @@ const AdminAccountsPage = () => {
   };
 
   useEffect(() => {
+    if (!user || !isAnyAdmin) return;
     const fetchWebsiteStatus = async () => {
       try {
         const res = await fetch('/api/website-status');
@@ -78,11 +110,40 @@ const AdminAccountsPage = () => {
     };
     fetchWebsiteStatus();
     fetchAccounts();
-  }, []);
+  }, [user?.id, user?.role]);
+
+  const getStatusBadge = (status) => {
+    const s = (status || 'active').toLowerCase();
+    const styles = {
+      active: 'bg-green-100 text-green-700 border-green-200',
+      inactive: 'bg-neutral-100 text-neutral-600 border-neutral-300',
+      pending: 'bg-amber-100 text-amber-800 border-amber-300 font-semibold',
+      flagged: 'bg-rose-100 text-rose-700 border-rose-200 font-semibold',
+      suspended: 'bg-amber-100 text-amber-800 border-amber-300 font-bold',
+      blocked: 'bg-red-100 text-red-700 border-red-300 font-bold',
+    };
+    const dotColors = {
+      active: 'bg-green-500',
+      inactive: 'bg-neutral-400',
+      pending: 'bg-amber-500',
+      flagged: 'bg-rose-500',
+      suspended: 'bg-amber-500',
+      blocked: 'bg-red-500',
+    };
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize border ${styles[s] || styles.active}`}>
+        <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotColors[s] || dotColors.active}`} />
+        {s}
+      </span>
+    );
+  };
 
   const openBalanceModal = (acc) => {
     setSelectedAccount(acc);
     setNewBalance(String(acc.balance));
+    setDepositDate(acc.initialDepositDate || new Date().toISOString().split('T')[0]);
+    setOpeningDate(acc.openingDate || new Date().toISOString().split('T')[0]);
+    setAccountStatus(acc.status || 'active');
     setShowBalanceModal(true);
   };
 
@@ -91,30 +152,41 @@ const AdminAccountsPage = () => {
     if (!selectedAccount) return;
     setSavingBalance(true);
     try {
+      const payload = { id: selectedAccount.id };
+      if (canDo('canManageBalances')) {
+        payload.balance = parseFloat(newBalance) || 0;
+        payload.initialDepositDate = depositDate;
+        payload.openingDate = openingDate;
+      }
+      if (canDo('canManageStatus')) {
+        payload.status = accountStatus;
+      }
       const res = await fetch('/api/admin/accounts', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: selectedAccount.id,
-          balance: parseFloat(newBalance) || 0,
-        }),
+        body: JSON.stringify(payload),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        alert('Account balance updated successfully!');
+        alert('Account updated successfully!');
         setShowBalanceModal(false);
         fetchAccounts();
       } else {
-        alert('Failed to update balance.');
+        alert(data.message || 'Failed to update account.');
       }
     } catch (err) {
       console.error(err);
-      alert('Error updating balance.');
+      alert('Error updating account.');
     } finally {
       setSavingBalance(false);
     }
   };
 
   const handleToggleFlag = async (acc) => {
+    if (!canDo('canManageStatus')) {
+      alert('You do not have permission to change account status.');
+      return;
+    }
     const newStatus = acc.status === 'flagged' ? 'active' : 'flagged';
     try {
       const res = await fetch('/api/admin/accounts', {
@@ -124,6 +196,9 @@ const AdminAccountsPage = () => {
       });
       if (res.ok) {
         fetchAccounts();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || 'Failed to update account status.');
       }
     } catch (e) {
       console.error(e);
@@ -133,14 +208,17 @@ const AdminAccountsPage = () => {
   const filteredAccounts = accounts.filter(
     (a) =>
       a.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.accountNumber?.includes(searchQuery)
+      a.accountNumber?.includes(searchQuery) ||
+      a.createdByAdminName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const tabs = [
-    { id: 'users', label: 'Users', icon: Users, path: '/admin' },
-    { id: 'accounts', label: 'Accounts', icon: CreditCard, path: '/admin/accounts' },
-    { id: 'transactions', label: 'Transactions', icon: History, path: '/admin/transactions' },
+  const basePath = isSuperAdmin ? '/super-admin' : '/admin';
+  const rawTabs = [
+    { id: 'users', label: isSuperAdmin ? 'Users & Admins' : 'My Users', icon: Users, path: basePath },
+    { id: 'accounts', label: isSuperAdmin ? 'All Accounts' : 'User Accounts', icon: CreditCard, path: `${basePath}/accounts`, perm: 'canViewAccounts' },
+    { id: 'transactions', label: isSuperAdmin ? 'All Transactions' : 'User Transactions', icon: History, path: `${basePath}/transactions`, perm: 'canViewTransactions' },
   ];
+  const tabs = rawTabs.filter((t) => !t.perm || canDo(t.perm));
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -154,86 +232,94 @@ const AdminAccountsPage = () => {
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-primary-navy mb-1">Account Balances & Limits</h1>
-                <p className="text-neutral-600 text-sm">Directly update customer balances, account numbers, and status.</p>
+                <p className="text-neutral-600 text-sm">
+                  {isSuperAdmin
+                    ? 'Directly update customer balances, account numbers, and status across all Admins.'
+                    : 'View and manage account balances for users you onboarded.'}
+                </p>
               </div>
 
-              {/* Website Control */}
-              <Card className="p-2 px-4 shadow-sm border border-neutral-200">
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    <Shield className="w-4 h-4 text-primary-blue" />
-                    <span className="text-xs font-semibold text-neutral-700">Site Status:</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                      websiteOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {websiteOpen ? 'Open' : 'Closed'}
-                    </span>
-                  </div>
-                  <Button
-                    variant={websiteOpen ? 'danger' : 'primary'}
-                    onClick={async () => {
-                      const next = !websiteOpen;
-                      try {
-                        const res = await fetch('/api/website-status', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ isOpen: next }),
-                        });
-                        if (res.ok) {
-                          setWebsiteOpen(next);
-                          alert(`Website has been ${next ? 'opened' : 'closed'}.`);
-                        }
-                      } catch (e) {
-                        console.error(e);
-                      }
-                    }}
-                    className="px-3 py-1 text-xs"
-                  >
-                    {websiteOpen ? <PowerOff className="w-3.5 h-3.5 mr-1 inline" /> : <Power className="w-3.5 h-3.5 mr-1 inline" />}
-                    {websiteOpen ? 'Close Site' : 'Open Site'}
-                  </Button>
-                </div>
-              </Card>
+              {/* Website Control — EXCLUSIVELY FOR SUPER ADMIN */}
+              {isSuperAdmin && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Card className="p-2 px-4 shadow-sm border border-neutral-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        <Shield className="w-4 h-4 text-primary-blue" />
+                        <span className="text-xs font-semibold text-neutral-700">Website Lock:</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                          websiteOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {websiteOpen ? 'Open' : 'Locked'}
+                        </span>
+                      </div>
+                      <Button
+                        variant={websiteOpen ? 'danger' : 'primary'}
+                        onClick={async () => {
+                          const next = !websiteOpen;
+                          try {
+                            const res = await fetch('/api/website-status', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ isOpen: next }),
+                            });
+                            if (res.ok) {
+                              setWebsiteOpen(next);
+                              alert(`Website has been ${next ? 'opened' : 'locked'}.`);
+                            }
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        }}
+                        className="px-3 py-1 text-xs"
+                      >
+                        {websiteOpen ? <PowerOff className="w-3.5 h-3.5 mr-1 inline" /> : <Power className="w-3.5 h-3.5 mr-1 inline" />}
+                        {websiteOpen ? 'Lock Site' : 'Open Site'}
+                      </Button>
+                    </div>
+                  </Card>
 
-              <Card className="p-2 px-4 shadow-sm border border-neutral-200">
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-4 h-4 text-primary-blue" />
-                    <span className="text-xs font-semibold text-neutral-700">Spending Overview:</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                      showSpendingOverview ? 'bg-green-100 text-green-700' : 'bg-neutral-200 text-neutral-700'
-                    }`}>
-                      {showSpendingOverview ? 'Visible' : 'Hidden'}
-                    </span>
-                  </div>
-                  <Button
-                    variant={showSpendingOverview ? 'danger' : 'primary'}
-                    disabled={loadingSpendingToggle}
-                    onClick={async () => {
-                      const nextVal = !showSpendingOverview;
-                      setLoadingSpendingToggle(true);
-                      try {
-                        const res = await fetch('/api/website-status', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ showSpendingOverview: nextVal }),
-                        });
-                        if (res.ok) {
-                          setShowSpendingOverview(nextVal);
-                        }
-                      } catch (e) {
-                        console.error(e);
-                      } finally {
-                        setLoadingSpendingToggle(false);
-                      }
-                    }}
-                    className="px-3 py-1 text-xs"
-                  >
-                    {showSpendingOverview ? <EyeOff className="w-3.5 h-3.5 mr-1 inline" /> : <Eye className="w-3.5 h-3.5 mr-1 inline" />}
-                    {showSpendingOverview ? 'Hide' : 'Show'}
-                  </Button>
+                  <Card className="p-2 px-4 shadow-sm border border-neutral-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        <TrendingUp className="w-4 h-4 text-primary-blue" />
+                        <span className="text-xs font-semibold text-neutral-700">Spending Overview:</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                          showSpendingOverview ? 'bg-green-100 text-green-700' : 'bg-neutral-200 text-neutral-700'
+                        }`}>
+                          {showSpendingOverview ? 'Visible' : 'Hidden'}
+                        </span>
+                      </div>
+                      <Button
+                        variant={showSpendingOverview ? 'danger' : 'primary'}
+                        disabled={loadingSpendingToggle}
+                        onClick={async () => {
+                          const nextVal = !showSpendingOverview;
+                          setLoadingSpendingToggle(true);
+                          try {
+                            const res = await fetch('/api/website-status', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ showSpendingOverview: nextVal }),
+                            });
+                            if (res.ok) {
+                              setShowSpendingOverview(nextVal);
+                            }
+                          } catch (e) {
+                            console.error(e);
+                          } finally {
+                            setLoadingSpendingToggle(false);
+                          }
+                        }}
+                        className="px-3 py-1 text-xs"
+                      >
+                        {showSpendingOverview ? <EyeOff className="w-3.5 h-3.5 mr-1 inline" /> : <Eye className="w-3.5 h-3.5 mr-1 inline" />}
+                        {showSpendingOverview ? 'Hide' : 'Show'}
+                      </Button>
+                    </div>
+                  </Card>
                 </div>
-              </Card>
+              )}
             </div>
 
             {/* Tabs */}
@@ -271,13 +357,16 @@ const AdminAccountsPage = () => {
             </Card>
 
             {/* Accounts Table */}
-            <Card title={`All Accounts (${filteredAccounts.length})`} subtitle="View and edit live account balances">
+            <Card title={`${isSuperAdmin ? 'All Accounts' : 'Your Users\' Accounts'} (${filteredAccounts.length})`} subtitle="View and edit live account balances">
               {/* Desktop Table (Hidden on Mobile) */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-neutral-200 text-sm">
                   <thead>
                     <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-600">
                       <th className="text-left py-3 px-4 font-semibold">Account Holder</th>
+                      {isSuperAdmin && (
+                        <th className="text-left py-3 px-4 font-semibold">Onboarded By</th>
+                      )}
                       <th className="text-left py-3 px-4 font-semibold">Account Number</th>
                       <th className="text-left py-3 px-4 font-semibold">Type</th>
                       <th className="text-left py-3 px-4 font-semibold">Current Balance</th>
@@ -288,13 +377,13 @@ const AdminAccountsPage = () => {
                   <tbody className="divide-y divide-neutral-200">
                     {loading ? (
                       <tr>
-                        <td colSpan="6" className="text-center py-8 text-neutral-500">
+                        <td colSpan={isSuperAdmin ? 7 : 6} className="text-center py-8 text-neutral-500">
                           Loading accounts...
                         </td>
                       </tr>
                     ) : filteredAccounts.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="text-center py-8 text-neutral-500">
+                        <td colSpan={isSuperAdmin ? 7 : 6} className="text-center py-8 text-neutral-500">
                           No accounts found.
                         </td>
                       </tr>
@@ -302,6 +391,13 @@ const AdminAccountsPage = () => {
                       filteredAccounts.map((account) => (
                         <tr key={account.id} className="hover:bg-neutral-50 transition-colors">
                           <td className="py-3 px-4 font-medium text-neutral-900">{account.userName}</td>
+                          {isSuperAdmin && (
+                            <td className="py-3 px-4">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-primary-blue border border-blue-200">
+                                {account.createdByAdminName || 'Super Administrator'}
+                              </span>
+                            </td>
+                          )}
                           <td className="py-3 px-4 font-mono text-neutral-600 font-semibold">
                             {account.accountNumber}
                           </td>
@@ -314,30 +410,30 @@ const AdminAccountsPage = () => {
                             ${Number(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${
-                              account.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
-                              {account.status}
-                            </span>
+                            {getStatusBadge(account.status)}
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end space-x-2">
-                              <Button
-                                onClick={() => openBalanceModal(account)}
-                                className="text-xs px-3 py-1 flex items-center space-x-1"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                                <span>Update Balance</span>
-                              </Button>
-                              <button
-                                onClick={() => handleToggleFlag(account)}
-                                className={`p-1.5 rounded transition-colors ${
-                                  account.status === 'flagged' ? 'text-green-600 hover:bg-green-50' : 'text-amber-600 hover:bg-amber-50'
-                                }`}
-                                title={account.status === 'flagged' ? 'Unflag Account' : 'Flag Account'}
-                              >
-                                <AlertCircle className="w-4 h-4" />
-                              </button>
+                              {(canDo('canManageBalances') || canDo('canManageStatus')) && (
+                                <Button
+                                  onClick={() => openBalanceModal(account)}
+                                  className="text-xs px-3 py-1 flex items-center space-x-1"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  <span>{canDo('canManageBalances') ? 'Update Balance' : 'Update Status'}</span>
+                                </Button>
+                              )}
+                              {canDo('canManageStatus') && (
+                                <button
+                                  onClick={() => handleToggleFlag(account)}
+                                  className={`p-1.5 rounded transition-colors ${
+                                    account.status === 'flagged' ? 'text-green-600 hover:bg-green-50' : 'text-amber-600 hover:bg-amber-50'
+                                  }`}
+                                  title={account.status === 'flagged' ? 'Unflag Account' : 'Flag Account'}
+                                >
+                                  <AlertCircle className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -361,9 +457,12 @@ const AdminAccountsPage = () => {
                           <div className="font-bold text-neutral-900 text-sm">{account.userName}</div>
                           <div className="font-mono text-xs text-neutral-500">{account.accountNumber}</div>
                         </div>
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                          {account.type}
-                        </span>
+                        <div className="flex items-center space-x-1.5">
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                            {account.type}
+                          </span>
+                          {getStatusBadge(account.status)}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-bank border border-neutral-200">
@@ -374,22 +473,26 @@ const AdminAccountsPage = () => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button
-                            onClick={() => openBalanceModal(account)}
-                            className="text-xs px-2.5 py-1.5 flex items-center space-x-1"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>Update</span>
-                          </Button>
-                          <button
-                            onClick={() => handleToggleFlag(account)}
-                            className={`p-1.5 rounded transition-colors ${
-                              account.status === 'flagged' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'
-                            }`}
-                            title={account.status === 'flagged' ? 'Unflag Account' : 'Flag Account'}
-                          >
-                            <AlertCircle className="w-4 h-4" />
-                          </button>
+                          {(canDo('canManageBalances') || canDo('canManageStatus')) && (
+                            <Button
+                              onClick={() => openBalanceModal(account)}
+                              className="text-xs px-2.5 py-1.5 flex items-center space-x-1"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>Update</span>
+                            </Button>
+                          )}
+                          {canDo('canManageStatus') && (
+                            <button
+                              onClick={() => handleToggleFlag(account)}
+                              className={`p-1.5 rounded transition-colors ${
+                                account.status === 'flagged' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'
+                              }`}
+                              title={account.status === 'flagged' ? 'Unflag Account' : 'Flag Account'}
+                            >
+                              <AlertCircle className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -408,7 +511,7 @@ const AdminAccountsPage = () => {
             <div className="flex justify-between items-center pb-4 border-b border-neutral-200 mb-4">
               <div className="flex items-center space-x-2">
                 <DollarSign className="w-5 h-5 text-green-600" />
-                <h3 className="text-lg font-bold text-primary-navy">Update Account Balance</h3>
+                <h3 className="text-lg font-bold text-primary-navy">Update Account</h3>
               </div>
               <button onClick={() => setShowBalanceModal(false)} className="text-neutral-400 hover:text-neutral-600">
                 <X className="w-5 h-5" />
@@ -422,28 +525,71 @@ const AdminAccountsPage = () => {
                 <div><span className="text-neutral-500">Current Balance:</span> <span className="font-semibold text-green-700">${Number(selectedAccount.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-neutral-700 mb-1">New Balance Amount ($) *</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={newBalance}
-                    onChange={(e) => setNewBalance(e.target.value)}
-                    className="input-field pl-10 font-bold text-lg"
-                    placeholder="0.00"
-                  />
+              {canDo('canManageBalances') && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-700 mb-1">New Balance Amount ($) *</label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={newBalance}
+                        onChange={(e) => setNewBalance(e.target.value)}
+                        className="input-field pl-10 font-bold text-lg"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">Initial Deposit Date</label>
+                      <input
+                        type="date"
+                        value={depositDate}
+                        onChange={(e) => setDepositDate(e.target.value)}
+                        className="input-field text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 mb-1">Account Opening Date</label>
+                      <input
+                        type="date"
+                        value={openingDate}
+                        onChange={(e) => setOpeningDate(e.target.value)}
+                        className="input-field text-sm"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {canDo('canManageStatus') && (
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-700 mb-1">Account Status</label>
+                  <select
+                    value={accountStatus}
+                    onChange={(e) => setAccountStatus(e.target.value)}
+                    className="input-field text-sm"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pending">Pending</option>
+                    <option value="flagged">Flagged</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="blocked">Blocked</option>
+                  </select>
                 </div>
-              </div>
+              )}
 
               <div className="flex justify-end space-x-3 pt-4 border-t border-neutral-200">
                 <Button variant="secondary" type="button" onClick={() => setShowBalanceModal(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={savingBalance}>
-                  {savingBalance ? 'Saving...' : 'Confirm Balance Change'}
+                  {savingBalance ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </form>
@@ -463,9 +609,18 @@ export async function getServerSideProps(context) {
   const { verifySessionToken } = await import('../../lib/security.js');
   const session = token ? await verifySessionToken(token) : null;
 
-  if (!session || session.role !== 'admin') {
+  if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
     return {
       notFound: true,
+    };
+  }
+
+  if (session.role === 'superadmin') {
+    return {
+      redirect: {
+        destination: '/super-admin/accounts',
+        permanent: false,
+      },
     };
   }
 

@@ -27,7 +27,7 @@ export async function GET(request) {
     let effectiveId = null;
     let effectiveEmail = null;
 
-    if (session.role === 'admin') {
+    if (session.role === 'admin' || session.role === 'superadmin') {
       effectiveId = queryUserId || session.id;
       effectiveEmail = queryEmail || session.email;
     } else {
@@ -52,7 +52,7 @@ export async function GET(request) {
     }
 
     // Active session revocation check for non-admin accounts
-    if (session.role !== 'admin') {
+    if (session.role !== 'admin' && session.role !== 'superadmin') {
       if (user.status === 'flagged') {
         return new Response(JSON.stringify({ message: 'Account restricted. Please contact customer service.' }), {
           status: 403,
@@ -116,8 +116,10 @@ export async function GET(request) {
           status: user.status,
           role: user.role,
           allowedPages: user.allowedPages || [],
+          lockedPages: user.lockedPages || [],
         },
         allowedPages: user.allowedPages || [],
+        lockedPages: user.lockedPages || [],
         primaryAccount,
         accounts,
         totalBalance,

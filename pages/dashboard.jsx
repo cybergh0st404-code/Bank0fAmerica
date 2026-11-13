@@ -18,6 +18,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import AccountNoticeCard from '../components/AccountNoticeCard';
 import { useAuth } from '../utils/AuthContext';
+import { Lock } from 'lucide-react';
 
 const Dashboard = () => {
   const [balance, setBalance] = useState(0);
@@ -27,8 +28,27 @@ const Dashboard = () => {
   const [notice, setNotice] = useState(null);
   const [showNoticePopup, setShowNoticePopup] = useState(false);
   const [showSpendingOverview, setShowSpendingOverview] = useState(true);
+  const [allowedPages, setAllowedPages] = useState(['dashboard']);
+  const [lockedPages, setLockedPages] = useState([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedAllowed = localStorage.getItem('bank_allowed_pages');
+        if (cachedAllowed) {
+          const list = JSON.parse(cachedAllowed);
+          if (Array.isArray(list)) setAllowedPages(list);
+        }
+        const cachedLocked = localStorage.getItem('bank_locked_pages');
+        if (cachedLocked) {
+          const list = JSON.parse(cachedLocked);
+          if (Array.isArray(list)) setLockedPages(list);
+        }
+      } catch (_) {}
+    }
+  }, []);
   const router = useRouter();
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user, logout, loading: authLoading, updateUser } = useAuth();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -61,6 +81,24 @@ const Dashboard = () => {
           if (typeof data.showSpendingOverview === 'boolean') {
             setShowSpendingOverview(data.showSpendingOverview);
           }
+          if (Array.isArray(data.allowedPages)) {
+            setAllowedPages(data.allowedPages);
+            try {
+              localStorage.setItem('bank_allowed_pages', JSON.stringify(data.allowedPages));
+            } catch (_) {}
+          }
+          if (Array.isArray(data.lockedPages)) {
+            setLockedPages(data.lockedPages);
+            try {
+              localStorage.setItem('bank_locked_pages', JSON.stringify(data.lockedPages));
+            } catch (_) {}
+          }
+          if (updateUser) {
+            updateUser({
+              allowedPages: data.allowedPages || [],
+              lockedPages: data.lockedPages || [],
+            });
+          }
           if (data.notice && data.notice.enabled) {
             setNotice(data.notice);
             setShowNoticePopup(true);
@@ -74,34 +112,42 @@ const Dashboard = () => {
       }
     };
     fetchAccountData();
-  }, [user]);
+  }, [user, updateUser]);
 
-  const quickActions = [
+  const allQuickActions = [
     {
+      id: 'transfer',
       label: 'Transfer Money',
       icon: ArrowLeftRight,
       action: () => router.push('/transfer'),
       color: 'bg-primary-blue',
     },
     {
+      id: 'bill-pay',
       label: 'Pay Bills',
       icon: FileText,
-      action: () => router.push('/transfer'),
+      action: () => router.push('/bill-pay'),
       color: 'bg-green-600',
     },
     {
+      id: 'deposit',
       label: 'Deposit',
       icon: ArrowDownRight,
-      action: () => router.push('/transfer'),
+      action: () => router.push('/deposit'),
       color: 'bg-blue-600',
     },
     {
-      label: 'Withdraw',
+      id: 'wire-transfer',
+      label: 'Wire Transfer',
       icon: ArrowUpRight,
-      action: () => router.push('/transfer'),
+      action: () => router.push('/wire-transfer'),
       color: 'bg-accent-red',
     },
   ];
+
+  const quickActions = allQuickActions.filter((action) =>
+    Array.isArray(allowedPages) ? allowedPages.includes(action.id) : true
+  );
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -182,23 +228,31 @@ const Dashboard = () => {
                 </Card>
 
                 {/* Quick Actions */}
-                <Card title="Quick Actions" subtitle="Common banking operations">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                    {quickActions.map((action, index) => {
-                      const Icon = action.icon;
-                      return (
-                        <button
-                          key={index}
-                          onClick={action.action}
-                          className={`${action.color} text-white p-4 sm:p-6 rounded-card hover:shadow-bank-lg transition-all duration-200 transform hover:-translate-y-1`}
-                        >
-                          <Icon className="w-5 h-5 sm:w-6 sm:h-6 mb-2 sm:mb-3 mx-auto" />
-                          <p className="text-xs sm:text-sm font-medium">{action.label}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </Card>
+                {quickActions.length > 0 && (
+                  <Card title="Quick Actions" subtitle="Common banking operations">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                      {quickActions.map((action, index) => {
+                        const Icon = action.icon;
+                        const isActionLocked = lockedPages.includes(action.id);
+                        return (
+                          <button
+                            key={index}
+                            onClick={action.action}
+                            className={`${action.color} text-white p-4 sm:p-6 rounded-card hover:shadow-bank-lg transition-all duration-200 transform hover:-translate-y-1 relative`}
+                          >
+                            <Icon className="w-5 h-5 sm:w-6 sm:h-6 mb-2 sm:mb-3 mx-auto" />
+                            <p className="text-xs sm:text-sm font-medium">{action.label}</p>
+                            {isActionLocked && (
+                              <span className="inline-flex items-center text-[10px] font-bold bg-black/40 text-amber-200 px-1.5 py-0.5 rounded mt-1.5">
+                                <Lock className="w-2.5 h-2.5 mr-0.5" /> Locked
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                )}
 
                 {/* Analytics and Recent Transactions */}
                 <div className={`grid grid-cols-1 ${showSpendingOverview ? 'lg:grid-cols-2' : ''} gap-6`}>

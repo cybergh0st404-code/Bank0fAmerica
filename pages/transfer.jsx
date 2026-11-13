@@ -10,10 +10,13 @@ import Button from '../components/Button'; // Adjust path after component migrat
 import Input from '../components/Input'; // Adjust path after component migration
 import { useAuth } from '../utils/AuthContext';
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 //import { isProjectExpired } from '../src/utils/expiryCheck';
 
 const Transfer = () => {
   const { user, logout } = useAuth();
+  const { isLocked } = usePageSecurity('transfer');
   const [step, setStep] = useState(1);
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [recipientName, setRecipientName] = useState('');
@@ -50,6 +53,10 @@ const Transfer = () => {
   }, [user]);
 
   const handleTransfer = () => {
+    if (isLocked) {
+      alert('This service has been administratively locked on your account. Transactions cannot be executed.');
+      return;
+    }
     if (step === 1) {
       if (recipientName.trim() && recipientAccount.trim()) {
         setSelectedRecipient({
@@ -91,7 +98,9 @@ const Transfer = () => {
               <p className="text-neutral-600">Send money securely to another account</p>
             </div>
 
-            {notice && notice.enabled ? (
+            {isLocked ? (
+              <LockedServiceNotice serviceName="Transfer Money" pageId="transfer" />
+            ) : notice && notice.enabled ? (
               <AccountNoticeCard notice={notice} />
             ) : (
               <>

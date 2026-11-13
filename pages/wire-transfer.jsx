@@ -21,10 +21,13 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 import { useAuth } from '../utils/AuthContext';
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 
 const WireTransferPage = () => {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
+  const { isLocked } = usePageSecurity('wire-transfer');
 
   const [wireType, setWireType] = useState('domestic'); // 'domestic' | 'international'
   const [amount, setAmount] = useState('');
@@ -78,6 +81,10 @@ const WireTransferPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isLocked) {
+      alert('This service has been administratively locked on your account. Wires cannot be dispatched.');
+      return;
+    }
     setIsSubmitting(true);
     setTimeout(() => {
       alert(`Wire transfer of $${parsedAmount.toLocaleString()} submitted successfully! Confirmation Ref: BOFA-WIRE-${Date.now().toString().slice(-8)}`);
@@ -106,7 +113,9 @@ const WireTransferPage = () => {
               <p className="text-neutral-600 text-sm">Send same-day domestic federal wires and international SWIFT remittances.</p>
             </div>
 
-            {notice && notice.enabled ? (
+            {isLocked ? (
+              <LockedServiceNotice serviceName="Fedwire & International Wire" pageId="wire-transfer" />
+            ) : notice && notice.enabled ? (
               <AccountNoticeCard notice={notice} />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

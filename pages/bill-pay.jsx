@@ -22,10 +22,13 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 import { useAuth } from '../utils/AuthContext';
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 
 const BillPayPage = () => {
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
+  const { isLocked } = usePageSecurity('bill-pay');
 
   const [billerName, setBillerName] = useState('');
   const [billerAccount, setBillerAccount] = useState('');
@@ -64,6 +67,10 @@ const BillPayPage = () => {
 
   const handlePay = (e) => {
     e.preventDefault();
+    if (isLocked) {
+      alert('This service has been administratively locked on your account. Bill payments cannot be scheduled.');
+      return;
+    }
     if (!billerName.trim() || !payAmount) return;
 
     setSubmitting(true);
@@ -99,7 +106,9 @@ const BillPayPage = () => {
               <p className="text-neutral-600 text-sm">Pay utilities, service providers, and manage automated recurring payments.</p>
             </div>
 
-            {notice && notice.enabled ? (
+            {isLocked ? (
+              <LockedServiceNotice serviceName="Bill Pay & Scheduled Payments" pageId="bill-pay" />
+            ) : notice && notice.enabled ? (
               <AccountNoticeCard notice={notice} />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

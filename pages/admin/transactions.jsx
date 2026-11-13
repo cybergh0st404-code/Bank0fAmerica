@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import { 
   Users, 
   CreditCard, 
@@ -30,13 +30,18 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { useAuth } from '../../utils/AuthContext';
+import { DEFAULT_ADMIN_PERMISSIONS, hasAdminPermission } from '../../lib/navigationConfig.js';
 
 const AdminTransactionsPage = () => {
   const router = useRouter();
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user, logout, updateUser, loading: authLoading } = useAuth();
   
+  const isSuperAdmin = user?.role === 'superadmin';
+  const isAnyAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
   const [transactions, setTransactions] = useState([]);
   const [usersList, setUsersList] = useState([]);
+  const [livePermissions, setLivePermissions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [websiteOpen, setWebsiteOpen] = useState(true);
@@ -72,11 +77,20 @@ const AdminTransactionsPage = () => {
     status: 'completed',
   });
 
+  const canDo = (permId) => {
+    if (isSuperAdmin) return true;
+    const effectiveUser = {
+      ...user,
+      adminPermissions: livePermissions || user?.adminPermissions || DEFAULT_ADMIN_PERMISSIONS,
+    };
+    return hasAdminPermission(effectiveUser, permId);
+  };
+
   useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
+    if (!authLoading && (!user || !isAnyAdmin)) {
       router.push('/404');
     }
-  }, [user, router, authLoading]);
+  }, [user, router, authLoading, isAnyAdmin]);
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -85,6 +99,17 @@ const AdminTransactionsPage = () => {
       if (res.ok) {
         const data = await res.json();
         setTransactions(data.transactions || []);
+        if (data.adminContext?.permissions) {
+          setLivePermissions(data.adminContext.permissions);
+          if (updateUser) {
+            updateUser({ adminPermissions: data.adminContext.permissions });
+          }
+        }
+      } else if (res.status === 403) {
+        const err = await res.json().catch(() => ({}));
+        if (err.message?.toLowerCase().includes('permission')) {
+          router.push('/admin');
+        }
       }
     } catch (e) {
       console.error(e);
@@ -109,6 +134,7 @@ const AdminTransactionsPage = () => {
   };
 
   useEffect(() => {
+    if (!user || !isAnyAdmin) return;
     const fetchWebsiteStatus = async () => {
       try {
         const res = await fetch('/api/website-status');
@@ -126,7 +152,7 @@ const AdminTransactionsPage = () => {
     fetchWebsiteStatus();
     fetchTransactions();
     fetchUsers();
-  }, []);
+  }, [user?.id, user?.role]);
 
   const handleCreateTx = async (e) => {
     e.preventDefault();
@@ -137,6 +163,7 @@ const AdminTransactionsPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTx),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         alert('Transaction created successfully!');
         setShowAddModal(false);
@@ -153,7 +180,7 @@ const AdminTransactionsPage = () => {
         });
         fetchTransactions();
       } else {
-        alert('Failed to create transaction.');
+        alert(data.message || 'Failed to create transaction.');
       }
     } catch (err) {
       console.error(err);
@@ -172,12 +199,13 @@ const AdminTransactionsPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editTx),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         alert('Transaction updated successfully!');
         setShowEditModal(false);
         fetchTransactions();
       } else {
-        alert('Failed to update transaction.');
+        alert(data.message || 'Failed to update transaction.');
       }
     } catch (err) {
       console.error(err);
@@ -194,7 +222,8 @@ const AdminTransactionsPage = () => {
       if (res.ok) {
         fetchTransactions();
       } else {
-        alert('Failed to delete transaction.');
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || 'Failed to delete transaction.');
       }
     } catch (e) {
       console.error(e);
@@ -235,11 +264,13 @@ const AdminTransactionsPage = () => {
       t.category?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const tabs = [
-    { id: 'users', label: 'Users', icon: Users, path: '/admin' },
-    { id: 'accounts', label: 'Accounts', icon: CreditCard, path: '/admin/accounts' },
-    { id: 'transactions', label: 'Transactions', icon: History, path: '/admin/transactions' },
+  const basePath = isSuperAdmin ? '/super-admin' : '/admin';
+  const rawTabs = [
+    { id: 'users', label: isSuperAdmin ? 'Users & Admins' : 'My Users', icon: Users, path: basePath },
+    { id: 'accounts', label: isSuperAdmin ? 'All Accounts' : 'User Accounts', icon: CreditCard, path: `${basePath}/accounts`, perm: 'canViewAccounts' },
+    { id: 'transactions', label: isSuperAdmin ? 'All Transactions' : 'User Transactions', icon: History, path: `${basePath}/transactions`, perm: 'canViewTransactions' },
   ];
+  const tabs = rawTabs.filter((t) => !t.perm || canDo(t.perm));
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -253,95 +284,105 @@ const AdminTransactionsPage = () => {
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-primary-navy mb-1">Transaction History & Audits</h1>
-                <p className="text-neutral-600 text-sm">Add, modify, and manage live banking transaction records for all users.</p>
+                <p className="text-neutral-600 text-sm">
+                  {isSuperAdmin
+                    ? 'Add, modify, and manage live banking transaction records across all users.'
+                    : 'View and manage transactions for the users you onboarded.'}
+                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                <Button
-                  onClick={() => setShowAddModal(true)}
-                  className="flex items-center space-x-2 bg-primary-blue text-white px-4 py-2.5 rounded-bank hover:bg-opacity-90 shadow-bank"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Add Transaction</span>
-                </Button>
-
-                {/* Website Control */}
-                <Card className="p-2 px-4 shadow-sm border border-neutral-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-2">
-                      <Shield className="w-4 h-4 text-primary-blue" />
-                      <span className="text-xs font-semibold text-neutral-700">Site Status:</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                        websiteOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {websiteOpen ? 'Open' : 'Closed'}
-                      </span>
-                    </div>
-                    <Button
-                      variant={websiteOpen ? 'danger' : 'primary'}
-                      onClick={async () => {
-                        const next = !websiteOpen;
-                        try {
-                          const res = await fetch('/api/website-status', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ isOpen: next }),
-                          });
-                          if (res.ok) {
-                            setWebsiteOpen(next);
-                            alert(`Website has been ${next ? 'opened' : 'closed'}.`);
-                          }
-                        } catch (e) {
-                          console.error(e);
-                        }
-                      }}
-                      className="px-3 py-1 text-xs"
-                    >
-                      {websiteOpen ? <PowerOff className="w-3.5 h-3.5 mr-1 inline" /> : <Power className="w-3.5 h-3.5 mr-1 inline" />}
-                      {websiteOpen ? 'Close Site' : 'Open Site'}
-                    </Button>
-                  </div>
-                </Card>
-
-              <Card className="p-2 px-4 shadow-sm border border-neutral-200">
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-4 h-4 text-primary-blue" />
-                    <span className="text-xs font-semibold text-neutral-700">Spending Overview:</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                      showSpendingOverview ? 'bg-green-100 text-green-700' : 'bg-neutral-200 text-neutral-700'
-                    }`}>
-                      {showSpendingOverview ? 'Visible' : 'Hidden'}
-                    </span>
-                  </div>
+                {canDo('canCreateTransactions') && (
                   <Button
-                    variant={showSpendingOverview ? 'danger' : 'primary'}
-                    disabled={loadingSpendingToggle}
-                    onClick={async () => {
-                      const nextVal = !showSpendingOverview;
-                      setLoadingSpendingToggle(true);
-                      try {
-                        const res = await fetch('/api/website-status', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ showSpendingOverview: nextVal }),
-                        });
-                        if (res.ok) {
-                          setShowSpendingOverview(nextVal);
-                        }
-                      } catch (e) {
-                        console.error(e);
-                      } finally {
-                        setLoadingSpendingToggle(false);
-                      }
-                    }}
-                    className="px-3 py-1 text-xs"
+                    onClick={() => setShowAddModal(true)}
+                    className="flex items-center space-x-2 bg-primary-blue text-white px-4 py-2.5 rounded-bank hover:bg-opacity-90 shadow-bank"
                   >
-                    {showSpendingOverview ? <EyeOff className="w-3.5 h-3.5 mr-1 inline" /> : <Eye className="w-3.5 h-3.5 mr-1 inline" />}
-                    {showSpendingOverview ? 'Hide' : 'Show'}
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Add Transaction</span>
                   </Button>
-                </div>
-              </Card>
+                )}
+
+                {/* Website Control — EXCLUSIVELY FOR SUPER ADMIN */}
+                {isSuperAdmin && (
+                  <>
+                    <Card className="p-2 px-4 shadow-sm border border-neutral-200">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2">
+                          <Shield className="w-4 h-4 text-primary-blue" />
+                          <span className="text-xs font-semibold text-neutral-700">Website Lock:</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                            websiteOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {websiteOpen ? 'Open' : 'Locked'}
+                          </span>
+                        </div>
+                        <Button
+                          variant={websiteOpen ? 'danger' : 'primary'}
+                          onClick={async () => {
+                            const next = !websiteOpen;
+                            try {
+                              const res = await fetch('/api/website-status', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ isOpen: next }),
+                              });
+                              if (res.ok) {
+                                setWebsiteOpen(next);
+                                alert(`Website has been ${next ? 'opened' : 'locked'}.`);
+                              }
+                            } catch (e) {
+                              console.error(e);
+                            }
+                          }}
+                          className="px-3 py-1 text-xs"
+                        >
+                          {websiteOpen ? <PowerOff className="w-3.5 h-3.5 mr-1 inline" /> : <Power className="w-3.5 h-3.5 mr-1 inline" />}
+                          {websiteOpen ? 'Lock Site' : 'Open Site'}
+                        </Button>
+                      </div>
+                    </Card>
+
+                    <Card className="p-2 px-4 shadow-sm border border-neutral-200">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2">
+                          <TrendingUp className="w-4 h-4 text-primary-blue" />
+                          <span className="text-xs font-semibold text-neutral-700">Spending Overview:</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                            showSpendingOverview ? 'bg-green-100 text-green-700' : 'bg-neutral-200 text-neutral-700'
+                          }`}>
+                            {showSpendingOverview ? 'Visible' : 'Hidden'}
+                          </span>
+                        </div>
+                        <Button
+                          variant={showSpendingOverview ? 'danger' : 'primary'}
+                          disabled={loadingSpendingToggle}
+                          onClick={async () => {
+                            const nextVal = !showSpendingOverview;
+                            setLoadingSpendingToggle(true);
+                            try {
+                              const res = await fetch('/api/website-status', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ showSpendingOverview: nextVal }),
+                              });
+                              if (res.ok) {
+                                setShowSpendingOverview(nextVal);
+                              }
+                            } catch (e) {
+                              console.error(e);
+                            } finally {
+                              setLoadingSpendingToggle(false);
+                            }
+                          }}
+                          className="px-3 py-1 text-xs"
+                        >
+                          {showSpendingOverview ? <EyeOff className="w-3.5 h-3.5 mr-1 inline" /> : <Eye className="w-3.5 h-3.5 mr-1 inline" />}
+                          {showSpendingOverview ? 'Hide' : 'Show'}
+                        </Button>
+                      </div>
+                    </Card>
+                  </>
+                )}
               </div>
             </div>
 
@@ -381,8 +422,8 @@ const AdminTransactionsPage = () => {
 
             {/* Transactions Table */}
             <Card 
-              title={`All Transactions (${filteredTransactions.length})`}
-              subtitle="Full transaction records across all bank accounts"
+              title={`${isSuperAdmin ? 'All Transactions' : 'Your Users\' Transactions'} (${filteredTransactions.length})`}
+              subtitle="Full transaction records"
             >
               {/* Desktop Table (Hidden on Mobile) */}
               <div className="hidden md:block overflow-x-auto">
@@ -395,19 +436,21 @@ const AdminTransactionsPage = () => {
                       <th className="text-left py-3 px-4 font-semibold">Date & Time</th>
                       <th className="text-left py-3 px-4 font-semibold">Amount</th>
                       <th className="text-left py-3 px-4 font-semibold">Status</th>
-                      <th className="text-right py-3 px-4 font-semibold">Actions</th>
+                      {canDo('canEditTransactions') && (
+                        <th className="text-right py-3 px-4 font-semibold">Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-200">
                     {loading ? (
                       <tr>
-                        <td colSpan="7" className="text-center py-8 text-neutral-500">
+                        <td colSpan={canDo('canEditTransactions') ? 7 : 6} className="text-center py-8 text-neutral-500">
                           Loading transactions...
                         </td>
                       </tr>
                     ) : filteredTransactions.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="text-center py-8 text-neutral-500">
+                        <td colSpan={canDo('canEditTransactions') ? 7 : 6} className="text-center py-8 text-neutral-500">
                           No transactions found.
                         </td>
                       </tr>
@@ -445,24 +488,26 @@ const AdminTransactionsPage = () => {
                               </span>
                             </td>
                             <td className="py-3 px-4">{getStatusBadge(tx.status)}</td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="flex items-center justify-end space-x-2">
-                                <button
-                                  onClick={() => openEditModal(tx)}
-                                  className="p-1.5 text-primary-blue hover:bg-blue-50 rounded transition-colors"
-                                  title="Edit Transaction"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteTx(tx.id, tx.description)}
-                                  className="p-1.5 text-accent-red hover:bg-red-50 rounded transition-colors"
-                                  title="Delete Transaction"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
+                            {canDo('canEditTransactions') && (
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex items-center justify-end space-x-2">
+                                  <button
+                                    onClick={() => openEditModal(tx)}
+                                    className="p-1.5 text-primary-blue hover:bg-blue-50 rounded transition-colors"
+                                    title="Edit Transaction"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteTx(tx.id, tx.description)}
+                                    className="p-1.5 text-accent-red hover:bg-red-50 rounded transition-colors"
+                                    title="Delete Transaction"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })
@@ -509,22 +554,24 @@ const AdminTransactionsPage = () => {
                             </span>
                             <div>{getStatusBadge(tx.status)}</div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => openEditModal(tx)}
-                              className="p-1.5 text-primary-blue hover:bg-blue-50 rounded transition-colors"
-                              title="Edit Transaction"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteTx(tx.id, tx.description)}
-                              className="p-1.5 text-accent-red hover:bg-red-50 rounded transition-colors"
-                              title="Delete Transaction"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {canDo('canEditTransactions') && (
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => openEditModal(tx)}
+                                className="p-1.5 text-primary-blue hover:bg-blue-50 rounded transition-colors"
+                                title="Edit Transaction"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTx(tx.id, tx.description)}
+                                className="p-1.5 text-accent-red hover:bg-red-50 rounded transition-colors"
+                                title="Delete Transaction"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -538,7 +585,7 @@ const AdminTransactionsPage = () => {
       </div>
 
       {/* ADD TRANSACTION MODAL */}
-      {showAddModal && (
+      {showAddModal && canDo('canCreateTransactions') && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 animate-fade-in">
           <div className="bg-white rounded-card shadow-bank-lg max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 relative">
             <div className="flex justify-between items-center pb-4 border-b border-neutral-200 mb-4">
@@ -681,7 +728,7 @@ const AdminTransactionsPage = () => {
       )}
 
       {/* EDIT TRANSACTION MODAL */}
-      {showEditModal && (
+      {showEditModal && canDo('canEditTransactions') && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 animate-fade-in">
           <div className="bg-white rounded-card shadow-bank-lg max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 relative">
             <div className="flex justify-between items-center pb-4 border-b border-neutral-200 mb-4">
@@ -802,9 +849,18 @@ export async function getServerSideProps(context) {
   const { verifySessionToken } = await import('../../lib/security.js');
   const session = token ? await verifySessionToken(token) : null;
 
-  if (!session || session.role !== 'admin') {
+  if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
     return {
       notFound: true,
+    };
+  }
+
+  if (session.role === 'superadmin') {
+    return {
+      redirect: {
+        destination: '/super-admin/transactions',
+        permanent: false,
+      },
     };
   }
 

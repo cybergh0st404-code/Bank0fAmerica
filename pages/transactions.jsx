@@ -13,6 +13,8 @@ import Input from '../components/Input'; // Adjust path after component migratio
 import { useAuth } from '../utils/AuthContext'; // Import useAuth
 import { useRouter } from 'next/router'; // Use next/router for pages directory
 import AccountNoticeCard from '../components/AccountNoticeCard';
+import LockedServiceNotice from '../components/LockedServiceNotice';
+import { usePageSecurity } from '../lib/usePageSecurity';
 
 const TransactionHistory = () => {
   const [transactions, setTransactions] = useState([]);
@@ -23,6 +25,7 @@ const TransactionHistory = () => {
   const [notice, setNotice] = useState(null);
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth(); // Use useAuth to get user, logout, and authLoading
+  const { isLocked } = usePageSecurity('transactions');
 
   // If auth is not loading and user is null (not authenticated), redirect to login
   useEffect(() => {
@@ -136,7 +139,9 @@ const TransactionHistory = () => {
                   )}
                 </div>
 
-                {notice && notice.enabled ? (
+                {isLocked ? (
+                  <LockedServiceNotice serviceName="Transaction History" pageId="transactions" />
+                ) : notice && notice.enabled ? (
                   <AccountNoticeCard notice={notice} />
                 ) : (
                   <>

@@ -4,20 +4,34 @@ import { verifySessionToken, getAdminSecretSlug } from './lib/security.js';
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
+  // Normalize /superadmin* (without hyphen) to /super-admin*
+  if (pathname === '/superadmin' || pathname.startsWith('/superadmin/')) {
+    const newPath = pathname.replace(/^\/superadmin/, '/super-admin');
+    return NextResponse.redirect(new URL(newPath, request.url));
+  }
+
   // Cryptographically verify session token (tamper-proof)
   const sessionToken = request.cookies.get('session_token')?.value;
   const session = sessionToken ? await verifySessionToken(sessionToken) : null;
   const isAuthenticated = Boolean(session);
   const userRole = session?.role || null;
 
-  // The secret admin slug (strictly from environment, no hardcoded fallbacks)
+  // The secret super-admin slug (strictly from environment, no hardcoded fallbacks)
   const secretSlug = getAdminSecretSlug();
-  const isAdminLogin = Boolean(secretSlug && pathname === `/admin/${secretSlug}/login`);
 
-  // Explicitly block /admin/login and rewrite to 404
-  if (pathname === '/admin/login') {
-    return NextResponse.rewrite(new URL('/404', request.url));
+  // Redirect legacy /admin/[secretSlug]/* to /super-admin/[secretSlug]/login
+  if (
+    secretSlug &&
+    (pathname === `/admin/${secretSlug}` || pathname === `/admin/${secretSlug}/login`)
+  ) {
+    return NextResponse.redirect(new URL(`/super-admin/${secretSlug}/login`, request.url));
   }
+
+  const isSuperAdminLogin = Boolean(
+    secretSlug &&
+      (pathname === `/super-admin/${secretSlug}/login` || pathname === `/super-admin/${secretSlug}`)
+  );
+  const isRegularAdminLogin = pathname === '/admin/login';
 
   // Fetch live website status from the status API
   let websiteIsOpen = true;
@@ -37,16 +51,31 @@ export async function middleware(request) {
     websiteIsOpen = websiteCookie === undefined ? true : websiteCookie === 'true';
   }
 
+  const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
+
   // If website is closed and the user is not an admin, redirect them to 404.
-  // Admins can always access the site, and the secret admin login route is allowed.
-  if (!websiteIsOpen && userRole !== 'admin') {
-    if (pathname !== '/404' && !isAdminLogin) {
+  // Super Admin login and Admin login routes remain accessible so admins can log in.
+  if (!websiteIsOpen && !isAdminRole) {
+    if (pathname !== '/404' && !isSuperAdminLogin && !isRegularAdminLogin) {
       return NextResponse.redirect(new URL('/404', request.url));
     }
   }
 
-  // Redirect authenticated admin users away from login pages to the admin dashboard
-  if (isAuthenticated && userRole === 'admin' && (pathname === '/login' || pathname === '/' || isAdminLogin)) {
+  // Redirect authenticated superadmin away from login pages to /super-admin
+  if (
+    isAuthenticated &&
+    userRole === 'superadmin' &&
+    (pathname === '/login' || pathname === '/' || isSuperAdminLogin || isRegularAdminLogin)
+  ) {
+    return NextResponse.redirect(new URL('/super-admin', request.url));
+  }
+
+  // Redirect authenticated regular admin away from login pages to /admin
+  if (
+    isAuthenticated &&
+    userRole === 'admin' &&
+    (pathname === '/login' || pathname === '/' || isRegularAdminLogin)
+  ) {
     return NextResponse.redirect(new URL('/admin', request.url));
   }
 
@@ -61,17 +90,42 @@ export async function middleware(request) {
   }
 
   // Protect dashboard and other user pages
-  if (['/dashboard', '/transfer', '/transactions', '/cards', '/statements', '/wire-transfer', '/bill-pay', '/deposit', '/credit-score', '/security', '/messages', '/settings'].includes(pathname)) {
+  if (
+    [
+      '/dashboard',
+      '/transfer',
+      '/transactions',
+      '/cards',
+      '/statements',
+      '/wire-transfer',
+      '/bill-pay',
+      '/deposit',
+      '/credit-score',
+      '/security',
+      '/messages',
+      '/settings',
+    ].includes(pathname)
+  ) {
     if (!isAuthenticated) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
   }
 
-  // Protect all /admin routes (excluding the secret admin login route)
-  // If not authenticated as admin, rewrite to 404 (pretend the route doesn't exist)
-  if (pathname.startsWith('/admin') && !isAdminLogin) {
-    if (!isAuthenticated || userRole !== 'admin') {
+  // Protect all /super-admin routes (excluding the secret super-admin login route)
+  if (pathname.startsWith('/super-admin') && !isSuperAdminLogin) {
+    if (!isAuthenticated || userRole !== 'superadmin') {
       return NextResponse.rewrite(new URL('/404', request.url));
+    }
+  }
+
+  // Protect all /admin routes (excluding /admin/login)
+  if (pathname.startsWith('/admin') && !isRegularAdminLogin) {
+    if (!isAuthenticated || !isAdminRole) {
+      return NextResponse.rewrite(new URL('/404', request.url));
+    }
+    if (userRole === 'superadmin') {
+      const targetPath = pathname.replace(/^\/admin/, '/super-admin');
+      return NextResponse.redirect(new URL(targetPath, request.url));
     }
   }
 

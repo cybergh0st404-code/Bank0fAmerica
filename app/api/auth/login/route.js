@@ -114,7 +114,7 @@ export async function POST(request) {
     const isProd = process.env.NODE_ENV === 'production';
 
     // -------------------------------------------------------------------------
-    // Environment Admin Credentials Flow
+    // Environment Admin Credentials Flow (Super Admin)
     // -------------------------------------------------------------------------
     if (ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
       const isPassValid = await verifyPassword(password, ADMIN_PASSWORD);
@@ -131,7 +131,7 @@ export async function POST(request) {
       clearRateLimit(`ip:${clientIp}`);
       clearRateLimit(`account:${normalizedEmail}`);
 
-      const user = { id: 'admin-1', name: 'Administrator', email: ADMIN_EMAIL, role: 'admin' };
+      const user = { id: 'admin-1', name: 'Super Administrator', email: ADMIN_EMAIL, role: 'superadmin' };
       const sessionToken = await createSessionToken(user);
       const cookieHeader = `session_token=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}; ${isProd ? 'Secure;' : ''}`;
 
@@ -175,8 +175,8 @@ export async function POST(request) {
         }
       }
 
-      // If user has admin role in database, also strictly require the secret admin slug
-      if (dbUser.role === 'admin') {
+      // If user has superadmin role in database, strictly require the secret admin slug
+      if (dbUser.role === 'superadmin') {
         if (!configuredSlug || !adminSlug || adminSlug !== configuredSlug) {
           recordFailedAttempt(`ip:${clientIp}`);
           recordFailedAttempt(`account:${normalizedEmail}`);
@@ -185,6 +185,39 @@ export async function POST(request) {
             headers: { 'Content-Type': 'application/json' },
           });
         }
+      }
+
+      // If user is an onboarded admin and provided an adminSlug, verify it matches
+      if (dbUser.role === 'admin' && adminSlug) {
+        if (!configuredSlug || adminSlug !== configuredSlug) {
+          recordFailedAttempt(`ip:${clientIp}`);
+          recordFailedAttempt(`account:${normalizedEmail}`);
+          return new Response(JSON.stringify({ message: 'Invalid credentials.' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      if (dbUser.status === 'blocked') {
+        return new Response(JSON.stringify({ message: 'Account has been blocked by administration. Access denied.' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (dbUser.status === 'suspended') {
+        return new Response(JSON.stringify({ message: 'Account is temporarily suspended. Please contact customer service.' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (dbUser.role === 'admin' && dbUser.status === 'inactive') {
+        return new Response(JSON.stringify({ message: 'Administrator account is currently inactive. Contact Super Admin.' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
 
       if (dbUser.status === 'flagged') {
@@ -213,7 +246,7 @@ export async function POST(request) {
           );
         }
 
-        // Step 2: Validate 2FA code (strictly without static bypass codes)
+        // Step 2: Validate 2FA code
         let isCodeValid = false;
 
         // Verify against challenge ticket if provided
@@ -263,7 +296,9 @@ export async function POST(request) {
         email: dbUser.email,
         role: dbUser.role || 'user',
         allowedPages: dbUser.allowedPages || null,
+        lockedPages: dbUser.lockedPages || [],
         notice: dbUser.notice || null,
+        adminPermissions: dbUser.adminPermissions || null,
       };
 
       const sessionToken = await createSessionToken({

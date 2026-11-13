@@ -37,22 +37,29 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true); // Added loading state for initial auth check
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Attempt to load user from cookies on mount
     const storedAuthStatus = getCookie('isAuthenticated');
     const storedUserData = getCookie('user');
 
     if (storedAuthStatus === 'true' && storedUserData) {
       try {
-        setUser(JSON.parse(storedUserData));
+        const parsed = JSON.parse(storedUserData);
+        setUser(parsed);
         setIsAuthenticated(true);
+        if (typeof window !== 'undefined') {
+          if (parsed.allowedPages && Array.isArray(parsed.allowedPages)) {
+            localStorage.setItem('bank_allowed_pages', JSON.stringify(parsed.allowedPages));
+          }
+          if (parsed.lockedPages && Array.isArray(parsed.lockedPages)) {
+            localStorage.setItem('bank_locked_pages', JSON.stringify(parsed.lockedPages));
+          }
+        }
       } catch (e) {
         console.error("Failed to parse user data from cookies", e);
-        // Clear invalid data
-        setCookie('user', '', -1); // Remove cookie
-        setCookie('isAuthenticated', '', -1); // Remove cookie
+        setCookie('user', '', -1);
+        setCookie('isAuthenticated', '', -1);
       }
     }
     setLoading(false);
@@ -61,22 +68,56 @@ export const AuthProvider = ({ children }) => {
   const login = (userData) => {
     setUser(userData);
     setIsAuthenticated(true);
-    setCookie('isAuthenticated', 'true', 7); // Set for 7 days
-    setCookie('user', JSON.stringify(userData), 7); // Set for 7 days
+    setCookie('isAuthenticated', 'true', 7);
+    setCookie('user', JSON.stringify(userData), 7);
+    if (typeof window !== 'undefined') {
+      try {
+        if (userData?.allowedPages && Array.isArray(userData.allowedPages)) {
+          localStorage.setItem('bank_allowed_pages', JSON.stringify(userData.allowedPages));
+        }
+        if (userData?.lockedPages && Array.isArray(userData.lockedPages)) {
+          localStorage.setItem('bank_locked_pages', JSON.stringify(userData.lockedPages));
+        }
+      } catch (_) {}
+    }
+  };
+
+  const updateUser = (fields) => {
+    setUser((prev) => {
+      const updated = { ...(prev || {}), ...fields };
+      setCookie('user', JSON.stringify(updated), 7);
+      if (typeof window !== 'undefined') {
+        try {
+          if (updated.allowedPages && Array.isArray(updated.allowedPages)) {
+            localStorage.setItem('bank_allowed_pages', JSON.stringify(updated.allowedPages));
+          }
+          if (updated.lockedPages && Array.isArray(updated.lockedPages)) {
+            localStorage.setItem('bank_locked_pages', JSON.stringify(updated.lockedPages));
+          }
+        } catch (_) {}
+      }
+      return updated;
+    });
   };
 
   const logout = async () => {
     setUser(null);
     setIsAuthenticated(false);
-    setCookie('isAuthenticated', '', -1); // Expire cookie
-    setCookie('user', '', -1); // Expire cookie
+    setCookie('isAuthenticated', '', -1);
+    setCookie('user', '', -1);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('bank_allowed_pages');
+        localStorage.removeItem('bank_locked_pages');
+      } catch (_) {}
+    }
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (_) { }
+    } catch (_) {}
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
