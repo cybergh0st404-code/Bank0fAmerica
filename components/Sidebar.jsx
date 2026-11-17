@@ -69,11 +69,11 @@ const Sidebar = ({ isAdmin = false }) => {
 
   // Sync latest allowed pages & locked pages from account-data API
   useEffect(() => {
-    if (isAdmin || !user) return;
+    if (isAdmin || (!user?.id && !user?.email)) return;
     let isMounted = true;
     const fetchPerms = async () => {
       try {
-        const res = await fetch('/api/user/account-data');
+        const res = await fetch('/api/user/account-data', { cache: 'no-store' });
         if (res.ok && isMounted) {
           const data = await res.json();
           if (data.allowedPages && Array.isArray(data.allowedPages)) {
@@ -92,6 +92,7 @@ const Sidebar = ({ isAdmin = false }) => {
             updateUser({
               allowedPages: data.allowedPages || [],
               lockedPages: data.lockedPages || [],
+              notice: data.notice || null,
             });
           }
         }
@@ -103,7 +104,7 @@ const Sidebar = ({ isAdmin = false }) => {
     return () => {
       isMounted = false;
     };
-  }, [isAdmin, user]);
+  }, [isAdmin, user?.id, user?.email]);
 
   const allUserMenuItems = [
     { id: 'dashboard', path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 // Helper function to set a cookie
 const setCookie = (name, value, days) => {
@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUser = (fields) => {
+  const updateUser = useCallback((fields) => {
     setUser((prev) => {
       const updated = { ...(prev || {}), ...fields };
       setCookie('user', JSON.stringify(updated), 7);
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       }
       return updated;
     });
-  };
+  }, []);
 
   const logout = async () => {
     setUser(null);

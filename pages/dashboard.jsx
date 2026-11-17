@@ -57,17 +57,17 @@ const Dashboard = () => {
   }, [user, router, authLoading]);
 
   useEffect(() => {
-    if (!user) return;
-    if (user.notice && user.notice.enabled) {
-      setNotice(user.notice);
-      setShowNoticePopup(true);
-    }
+    if (!user?.id && !user?.email) return;
+    let isMounted = true;
+
     const fetchAccountData = async () => {
       try {
         const query = user.id ? `?userId=${user.id}&email=${encodeURIComponent(user.email || '')}` : '';
-        const res = await fetch(`/api/user/account-data${query}`);
+        const res = await fetch(`/api/user/account-data${query}`, { cache: 'no-store' });
+        if (!isMounted) return;
         if (res.ok) {
           const data = await res.json();
+          if (!isMounted) return;
           if (data.totalBalance !== undefined) {
             setBalance(data.totalBalance);
           }
@@ -97,11 +97,12 @@ const Dashboard = () => {
             updateUser({
               allowedPages: data.allowedPages || [],
               lockedPages: data.lockedPages || [],
+              notice: data.notice || null,
             });
           }
           if (data.notice && data.notice.enabled) {
             setNotice(data.notice);
-            setShowNoticePopup(true);
+            setShowNoticePopup(data.notice.showPopup !== false);
           } else {
             setNotice(null);
             setShowNoticePopup(false);
@@ -112,7 +113,10 @@ const Dashboard = () => {
       }
     };
     fetchAccountData();
-  }, [user, updateUser]);
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, user?.email]);
 
   const allQuickActions = [
     {
