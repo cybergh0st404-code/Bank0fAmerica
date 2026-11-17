@@ -14,6 +14,7 @@ import {
   FileText,
   TrendingUp,
   Mail,
+  Headphones,
   X,
   LogOut,
   Lock,
@@ -115,6 +116,7 @@ const Sidebar = ({ isAdmin = false }) => {
     { id: 'statements', path: '/statements', icon: FileText, label: 'Statements & Tax' },
     { id: 'credit-score', path: '/credit-score', icon: TrendingUp, label: 'Credit Score' },
     { id: 'messages', path: '/messages', icon: Mail, label: 'Secure Messages' },
+    { id: 'support', path: '/messages?tab=support', icon: Headphones, label: 'Live Support & Concierge' },
     { id: 'security', path: '/security', icon: Shield, label: 'Security & Sessions' },
     { id: 'settings', path: '/settings', icon: Settings, label: 'Settings' },
   ];

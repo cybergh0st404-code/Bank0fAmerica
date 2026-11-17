@@ -22,10 +22,9 @@ import {
   DollarSign,
   Eye,
   EyeOff,
-  TrendingUp
+  TrendingUp,
+  LogOut
 } from 'lucide-react';
-import Navbar from '../../components/Navbar';
-import Sidebar from '../../components/Sidebar';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
@@ -266,19 +265,72 @@ const AdminTransactionsPage = () => {
 
   const basePath = isSuperAdmin ? '/super-admin' : '/admin';
   const rawTabs = [
-    { id: 'users', label: isSuperAdmin ? 'Users & Admins' : 'My Users', icon: Users, path: basePath },
-    { id: 'accounts', label: isSuperAdmin ? 'All Accounts' : 'User Accounts', icon: CreditCard, path: `${basePath}/accounts`, perm: 'canViewAccounts' },
-    { id: 'transactions', label: isSuperAdmin ? 'All Transactions' : 'User Transactions', icon: History, path: `${basePath}/transactions`, perm: 'canViewTransactions' },
+    { id: 'users', label: isSuperAdmin ? 'Client Roster' : 'My Clients', icon: Users, path: basePath },
+    { id: 'accounts', label: isSuperAdmin ? 'Account Ledger' : 'Client Accounts', icon: CreditCard, path: `${basePath}/accounts`, perm: 'canViewAccounts' },
+    { id: 'transactions', label: isSuperAdmin ? 'Transaction Audit' : 'Transactions', icon: History, path: `${basePath}/transactions`, perm: 'canViewTransactions' },
   ];
   const tabs = rawTabs.filter((t) => !t.perm || canDo(t.perm));
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <Navbar user={user} onLogout={logout} />
-      <div className="flex">
-        <Sidebar isAdmin={true} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-[#f0f4f9]">
+      <header className="bg-gradient-to-r from-[#011640] via-[#012169] to-[#082c7c] text-white border-b-4 border-[#E31837] shadow-lg sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-3.5 flex flex-wrap items-center justify-between gap-4 border-b border-white/10">
+            <Link href={basePath} className="flex items-center space-x-3">
+              <div className="bg-white px-2.5 py-1.5 rounded-lg shadow-sm flex items-center space-x-2">
+                <img src="/logo.png" alt="Bank of America" className="h-6 w-auto object-contain" />
+                <span className="font-extrabold text-[#012169] text-sm tracking-tight hidden sm:inline">BANK OF AMERICA</span>
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm sm:text-base font-extrabold tracking-wide">EXECUTIVE GOVERNANCE CONSOLE</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider border ${isSuperAdmin ? 'bg-[#E31837] text-white border-red-400' : 'bg-sky-500/20 text-sky-200 border-sky-400/40'}`}>
+                    {isSuperAdmin ? 'Master Super Admin' : 'Portfolio Admin'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-200 hidden sm:block">Transaction Ledger, Audit Trail & Posting Controls</p>
+              </div>
+            </Link>
+            <div className="flex items-center space-x-2.5">
+              <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 text-xs">
+                <span className={`w-2 h-2 rounded-full ${websiteOpen ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                <span className="text-blue-100 font-medium">Portal:</span>
+                <span className="font-bold">{websiteOpen ? 'ONLINE' : 'LOCKED (404)'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (logout) await logout();
+                  router.push('/login');
+                }}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-[#E31837] hover:bg-red-700 text-xs font-bold text-white shadow-sm"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+          <div className="py-2.5 flex items-center space-x-1.5 overflow-x-auto">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isCurrentRoute = router.pathname === tab.path;
+              return (
+                <Link
+                  key={tab.id}
+                  href={tab.path}
+                  className={`inline-flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${isCurrentRoute ? 'bg-white text-[#012169] shadow-sm' : 'text-blue-100 hover:bg-white/10 hover:text-white'}`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span>{tab.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </header>
+      <div>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="space-y-6">
             
             {/* Header */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -384,27 +436,6 @@ const AdminTransactionsPage = () => {
                   </>
                 )}
               </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="bg-white rounded-card shadow-bank p-1 flex space-x-1 overflow-x-auto">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <Link
-                    key={tab.id}
-                    href={tab.path}
-                    className={`flex-1 min-w-[130px] sm:min-w-0 flex items-center justify-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-bank transition-all text-xs sm:text-sm whitespace-nowrap ${
-                      router.pathname === tab.path 
-                        ? 'bg-primary-blue text-white shadow-bank font-semibold'
-                        : 'text-neutral-600 hover:bg-accent-soft'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span>{tab.label}</span>
-                  </Link>
-                );
-              })}
             </div>
 
             {/* Search */}

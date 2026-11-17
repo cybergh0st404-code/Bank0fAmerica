@@ -1,4 +1,13 @@
-import { getBankData, saveBankData, DEFAULT_ALLOWED_PAGES, normalizePagesList, resolveAdminContext } from '../../../../lib/db.js';
+import {
+  getBankData,
+  saveBankData,
+  DEFAULT_ALLOWED_PAGES,
+  normalizePagesList,
+  resolveAdminContext,
+  getAllSupportChatsMap,
+  DEFAULT_CORPORATE_EMAIL,
+  DEFAULT_ADVISOR_NAME,
+} from '../../../../lib/db.js';
 import { requireAdmin, hashPassword, hashTwoFactorCode } from '../../../../lib/security.js';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +23,10 @@ export async function GET(request) {
       });
     }
 
-    const data = await getBankData();
+    const [data, supportChatsMap] = await Promise.all([
+      getBankData(),
+      getAllSupportChatsMap(),
+    ]);
     const ctx = resolveAdminContext(auth, data);
     if (!ctx.valid) {
       return new Response(JSON.stringify({ message: ctx.error || 'Unauthorized' }), {
@@ -45,6 +57,15 @@ export async function GET(request) {
         (user.createdByAdminId && allAdminsMap[user.createdByAdminId]) ||
         'Super Administrator';
 
+      const supportChat = supportChatsMap[user.id] || {
+        userId: user.id,
+        corporateEmail: DEFAULT_CORPORATE_EMAIL,
+        advisorName: DEFAULT_ADVISOR_NAME,
+        messages: [],
+        unreadByAdmin: 0,
+        unreadByUser: 0,
+      };
+
       return {
         ...user,
         createdByAdminId: user.createdByAdminId || 'admin-1',
@@ -53,6 +74,7 @@ export async function GET(request) {
         totalBalance,
         primaryAccount: userAccounts[0] || null,
         initialDepositDate,
+        supportChat,
       };
     });
 
@@ -161,8 +183,12 @@ export async function POST(request) {
       tokenVersion: 1,
       createdByAdminId: ownerAdminId,
       createdByAdminName: ownerAdminName,
-      allowedPages: DEFAULT_ALLOWED_PAGES,
-      lockedPages: [],
+      allowedPages: ctx.hasPerm('canManageMenus') && Array.isArray(body.allowedPages)
+        ? Array.from(new Set(['dashboard', ...normalizePagesList(body.allowedPages)]))
+        : DEFAULT_ALLOWED_PAGES,
+      lockedPages: ctx.hasPerm('canManageMenus') && Array.isArray(body.lockedPages)
+        ? normalizePagesList(body.lockedPages).filter((p) => p !== 'dashboard')
+        : [],
       adminPermissions: {},
       notice: {
         enabled: false,
@@ -362,18 +388,62 @@ export async function PUT(request) {
       });
     }
 
-    // If notice settings were provided, update user notice
+    // If notice settings were provided, update user notice and append a new inbox message when sent/updated
     if (body.notice !== undefined) {
       const now = new Date();
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const formattedDate = `${months[now.getMonth()]} ${String(now.getDate()).padStart(2, '0')}, ${now.getFullYear()}`;
       const formattedTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
+      const prevNotice = current.notice || {};
+      let messageHistory = Array.isArray(prevNotice.messages) ? [...prevNotice.messages] : [];
+
+      if (
+        messageHistory.length === 0 &&
+        (prevNotice.sendAsMessage || prevNotice.enabled) &&
+        prevNotice.message
+      ) {
+        messageHistory.push({
+          id: `notice-msg-legacy-${Date.now() - 1000}`,
+          sender: prevNotice.sender || 'Bank of America Executive Compliance',
+          subject: prevNotice.subject || prevNotice.progressLabel || 'Official Account & Compliance Notice',
+          category: prevNotice.category || 'Notices',
+          message: prevNotice.message,
+          sentDate: prevNotice.sentDate || formattedDate,
+          sentTime: prevNotice.sentTime || formattedTime,
+          progress: typeof prevNotice.progress === 'number' ? prevNotice.progress : 65,
+          progressStatus: prevNotice.progressStatus || '65% • Action Required',
+          progressLabel: prevNotice.progressLabel || 'Authorization Progress',
+          enabled: Boolean(prevNotice.enabled),
+        });
+      }
+
+      if (body.replaceNoticeMessages === true && Array.isArray(body.notice.messages)) {
+        messageHistory = body.notice.messages;
+      } else if (body.notice.sendAsMessage && body.notice.message) {
+        const newNoticeMessage = {
+          id: `notice-msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          sender: body.notice.sender || 'Bank of America Executive Compliance',
+          subject: body.notice.subject || body.notice.progressLabel || 'Official Account & Compliance Notice',
+          category: body.notice.category || 'Notices',
+          message: body.notice.message,
+          sentDate: formattedDate,
+          sentTime: formattedTime,
+          sentAt: now.toISOString(),
+          progress: typeof body.notice.progress === 'number' ? body.notice.progress : 65,
+          progressStatus: body.notice.progressStatus || '65% • Action Required',
+          progressLabel: body.notice.progressLabel || 'Authorization Progress',
+          enabled: Boolean(body.notice.enabled),
+        };
+        messageHistory = [newNoticeMessage, ...messageHistory];
+      }
+
       updatedUser.notice = {
-        ...(current.notice || {}),
+        ...prevNotice,
         ...body.notice,
-        sentDate: body.notice.sendAsMessage ? (body.notice.sentDate || formattedDate) : (current.notice?.sentDate || formattedDate),
-        sentTime: body.notice.sendAsMessage ? (body.notice.sentTime || formattedTime) : (current.notice?.sentTime || formattedTime),
+        sentDate: body.notice.sendAsMessage ? formattedDate : (prevNotice.sentDate || formattedDate),
+        sentTime: body.notice.sendAsMessage ? formattedTime : (prevNotice.sentTime || formattedTime),
+        messages: messageHistory,
       };
     }
 
